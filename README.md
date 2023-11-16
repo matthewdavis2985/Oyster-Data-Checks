@@ -20,4 +20,9 @@ SUGGESTED WORKFLOW:
 4. Work on the issue in your local branch.
 5. Commit changes to save your work.
 6. If more time or contributions from others is needed, publish your branch back to the GitHub repo.
-7. 
+7. When the issue is resolved, issue a pull request to have the changes merged into the main branch and close the outstanding issue.
+
+FILE STRUCTURE:
+/code - RMarkdown scripts
+/documentation - In depth documentation of RMarkdown scripts
+/outputs - The outputs of the RMarkdown scripts
