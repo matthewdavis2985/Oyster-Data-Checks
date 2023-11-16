@@ -6,8 +6,8 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-03-28")  # End Date for Checks
+CheckStart <- as.Date("2020-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2020-03-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
 Database = "OysterLocalMD20230804E"
@@ -75,26 +75,14 @@ dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
 hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
   collect() 
 
-dboTripInfo <- tbl(con,in_schema("dbo", "TripInfo")) %>%
-  collect() 
-  
 hsdbSampleEvent <- tbl(con,in_schema("hsdb", "SampleEvent")) %>%
   collect() 
   
-dboSampleEvent <- tbl(con,in_schema("dbo", "SampleEvent")) %>%
-  collect() 
-
 hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
-  collect() 
-
-dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
   collect() 
 
 hsdbSedimentTrap <- tbl(con,in_schema("hsdb", "SedimentTrap")) %>%
   collect() 
-
-dboSedimentTrap <- tbl(con,in_schema("dbo", "SedimentTrap")) %>%
-  collect()
 
 DBI::dbDisconnect(con)
 
@@ -110,7 +98,7 @@ FixedLocations1 <- dboFixedLocations %>%
          StationNumber) %>% 
   distinct()
           
-TripInfo1 <- dboTripInfo %>% 
+TripInfo1 <- hsdbTripInfo %>% 
   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Sediment Trap" & DataStatus == "Proofed") %>%
   arrange(TripID)
 
@@ -118,21 +106,21 @@ TripInfo2 <- TripInfo1 %>%
   select(TripID, TripDate, Comments) %>%
   arrange(TripID)
 
-SampleEvent1 <- dboSampleEvent %>% 
+SampleEvent1 <- hsdbSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SDTP" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber)
 
-SampleEventWQ1 <- dboSampleEventWQ %>% 
+SampleEventWQ1 <- hsdbSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SDTP" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
-SedimentTrap1 <- dboSedimentTrap %>% 
+SedimentTrap1 <- hsdbSedimentTrap %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22),
          NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
@@ -140,30 +128,30 @@ SedimentTrap1 <- dboSedimentTrap %>%
   left_join(FixedLocations1, SedimentTrap1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, CupSampleID)
 
-hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Sediment Trap")  %>%
-  arrange(TripID)
-
-hsdbSampleEvent <- hsdbSampleEvent %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SDTP") %>%
-  arrange(TripDate)
-
-hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
-  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SDTP") %>%
-  arrange(TripDate)
-
-hsdbSedimentTrap <- hsdbSedimentTrap %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SDTP") %>%
-  arrange(TripDate)
+# hsdbTripInfo <- hsdbTripInfo %>% 
+#   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Sediment Trap")  %>%
+#   arrange(TripID)
+# 
+# hsdbSampleEvent <- hsdbSampleEvent %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SDTP") %>%
+#   arrange(TripDate)
+# 
+# hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SDTP") %>%
+#   arrange(TripDate)
+# 
+# hsdbSedimentTrap <- hsdbSedimentTrap %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SDTP") %>%
+#   arrange(TripDate)
 
 ```
 
 ```{r DatabaseErrors}
 ### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the dbo schema
+# Ensure the Primary Keys are unique in the hsdb schema
 ERR_Table1 <- data.frame()
 ERR_Table1a <- data.frame()
 ERR_Table1b <- data.frame()
@@ -171,50 +159,50 @@ ERR_Table1c <- data.frame()
 ERR_Table1d <- data.frame()
 
 if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
-  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
+  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
     mutate(PrimaryKey = TripID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
-  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
+  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
     mutate(PrimaryKey = SampleEventID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
-  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
+  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
     mutate(PrimaryKey = SampleEventWQID) %>% 
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SedimentTrap1[duplicated(SedimentTrap1$CupSampleID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SedimentTrap", SedimentTrap1[duplicated(SedimentTrap1$CupSampleID), ])) %>% 
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SedimentTrap", SedimentTrap1[duplicated(SedimentTrap1$CupSampleID), ])) %>% 
     mutate(PrimaryKey = CupSampleID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are unique in the hsdb schema
-ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SedimentTrap1$CupSampleID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSedimentTrap$CupSampleID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SedimentTrap")
+# ERR_Tablex <- data.frame()
+# sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SedimentTrap1$CupSampleID)
+# dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSedimentTrap$CupSampleID)
+# tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SedimentTrap")
+# 
+# # Loop through values
+# for (i in seq_along(sorc)) {
+#   for (j in seq_along(sorc[[i]])) {
+#     check_id <- sorc[[i]][j]
+#   # Check if the trip_id exists in TripInfo$TripID
+#     if ((check_id %in% dest[[i]])) {
+#     # Add trip_id to ERR_Table
+#       ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
+#     }
+#   }
+# }
 
-# Loop through values
-for (i in seq_along(sorc)) {
-  for (j in seq_along(sorc[[i]])) {
-    check_id <- sorc[[i]][j]
-  # Check if the trip_id exists in TripInfo$TripID
-    if ((check_id %in% dest[[i]])) {
-    # Add trip_id to ERR_Table
-      ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-    }
-  }
-}
-
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Tablex)
-rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Tablex)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d)
 
 
 ### DATABASE ERRORS ###
@@ -296,7 +284,7 @@ SedimentTrap_nulls <- filter(SedimentTrap1, is.na(CupSampleID) | is.na(SampleEve
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboSedimentTrap, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbSedimentTrap, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dboFixedLocations, dest, FixedLocations1, hsdbSedimentTrap, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
@@ -323,7 +311,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 
 ## Water Quality #
   # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>%
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
 
   # Out of range values
