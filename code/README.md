@@ -11,32 +11,35 @@ The final step in our data flow involves using R to inspect data for errors. RMa
 All data checks should be run on your local SQL database copy. Lines 7 – 13 contain the variables you should change to ensure the correct dates, estuary, and database copy are being used. 
 
 There are two distinct types of errors the data checks will detect: 
-1. Database Errors. These are errors that are specific to database structure and formatting. These may not be visible to or fixable by ODIN users. However, they MUST be corrected to ensure the database structure.
-	a. Examples include duplicate records and PKs, orphan records (no corresponding FK record), childless records, Fields = “” instead of NULL, expected sample events not occurring.
-2. Data Errors. These are errors that may represent mistakes in measurement, recording, entry, or otherwise incorrect data. These data may not necessarily fall outside of the realm of possibility but may either need extra documentation or deletion.
-	a. Examples include weights being higher or lower than expected, unexpected NULL values without Comments, GPS coordinates outside of sample universes. 
+<ol><li>Database Errors. These are errors that are specific to database structure and formatting. These may not be visible to or fixable by ODIN users. However, they MUST be corrected to ensure the database structure.</li> 
+	<ol><li>Examples include duplicate records and PKs, orphan records (no corresponding FK record), childless records, Fields = “” instead of NULL, expected sample events not occurring.</li></ol>
+<li>Data Errors. These are errors that may represent mistakes in measurement, recording, entry, or otherwise incorrect data. These data may not necessarily fall outside of the realm of possibility but may either need extra documentation or deletion.</li>
+	<ol><li>Examples include weights being higher or lower than expected, unexpected NULL values without Comments, GPS coordinates outside of sample universes.</li></ol>
+</ol>
 
 Data managers should follow the following steps to complete Data Checks:
-1. Identify the trip(s) that have been entered and proofed. Gather the physical data sheets.
-2. Open RStudio and load the appropriate Data Check program for your trip type and location.
-3. Modify the ‘CheckStart’, ‘CheckEnd’, ‘EstuaryCode’, and ‘Database’ variables for the trip(s) you are checking.
-	a. It is highly advised that the ‘CheckStart’ and ‘CheckEnd’ values encompass entire months (ex. 2023-01-01 to 2023-03-31). This will ensure that mistake trips are captured.
-	b. Note that the ‘CheckStart’ and ‘CheckEnd’ values MUST be in the YYYY-MM-DD format.
-4. Click ‘Knit’. Status will appear in the Render window. The report will open in a new window. Click ‘Open in Browser’.
-5. Review the report to ensure the anticipated trip(s) are included in your report. If not, ensure in SSMS that all records are Proofed. Repeat steps 3 – 5.
-6. If there are ANY Database Errors, they must be addressed immediately before proceeding. Correct any Database Errors and repeat steps 3 – 6.
-	a. The only times a Database Error can remain before proceeding are: 
-		i. If Childless Primary Keys are detected in Recruitment and Sediment during Deployment Only trips since there are no stringers or sediment traps being retrieved.
-		ii. If Childless Primary Keys are detected in Condition Index, Dermo, or Repro if water quality was taken, but no oysters were collected.
-	b. Make sure to test your corrections on your local copy before making them in fwcsqlint.
-	c. Create a new local copy before repeating steps 3 – 6.  
-7. Print the data check report.
-8. Data managers or trusted upper-level staff should review the detected errors using the decision tree on the next page.
-   ![Data Check Decision tree](https://github.com/matthewdavis2985/Oyster-Data-Checks/assets/149615191/fdacb0f0-7674-44ee-87d4-a3bd73cbc5d0)
+<ol><li>Identify the trip(s) that have been entered and proofed. Gather the physical data sheets.</li>
+<li>Open RStudio and load the appropriate Data Check program for your trip type and location.</li>
+<li>Modify the ‘CheckStart’, ‘CheckEnd’, ‘EstuaryCode’, and ‘Database’ variables for the trip(s) you are checking.</li>
+	<ol><li>It is highly advised that the ‘CheckStart’ and ‘CheckEnd’ values encompass entire months (ex. 2023-01-01 to 2023-03-31). This will ensure that mistake trips are captured.</li>
+	<li>Note that the ‘CheckStart’ and ‘CheckEnd’ values MUST be in the YYYY-MM-DD format.</li></ol>
+<li>Click ‘Knit’. Status will appear in the Render window. The report will open in a new window. Click ‘Open in Browser’.</li>
+<li>Review the report to ensure the anticipated trip(s) are included in your report. If not, ensure in SSMS that all records are Proofed. Repeat steps 3 – 5.</li>
+<li>If there are ANY Database Errors, they must be addressed immediately before proceeding. Correct any Database Errors and repeat steps 3 – 6.</li>
+	<ol><li>The only times a Database Error can remain before proceeding are:</li> 
+		<ol><li>If Childless Primary Keys are detected in Recruitment and Sediment during Deployment Only trips since there are no stringers or sediment traps being retrieved.</li>
+		<li>If Childless Primary Keys are detected in Condition Index, Dermo, or Repro if water quality was taken, but no oysters were collected.</li></ol>
+	<li>Make sure to test your corrections on your local copy before making them in fwcsqlint.</li>
+	<li>Create a new local copy before repeating steps 3 – 6.</li></ol>
+<li>Print the data check report.</li>
+<li>Data managers or trusted upper-level staff should review the detected errors using the "Data Check Decision Tree" below.</li>
+<li>If necessary, make appropriate changes or notations on your local copy before making them in fwcsqlint.</li>
+	<ol><li>Write out any changes or notations in a single SQL query to make it easier to run in your local copy and on fwcsqlint. Remember you can have multiple statements in a single query.</li> 
+	<li>If changes were made, create a new local copy and repeat steps 3 – 9.</li>  
+	<li>If no changes were made proceed to step 10.</li></ol>
+<li>Test the SQL code generated by the Data Checks report and ensure that updated fields appear correct, and that records are moved from the dbo schema to the hsdb schema.</li>
+<li>File the data sheets and the final Data Checks report in the appropriate binder for your location.</li>
+</ol>
 
-10. If necessary, make appropriate changes or notations on your local copy before making them in fwcsqlint.
-	a. Write out any changes or notations in a single SQL query to make it easier to run in your local copy and on fwcsqlint. Remember you can have multiple statements in a single query.
-	b. If changes were made, create a new local copy and repeat steps 3 – 9.  
-	c. If no changes were made proceed to step 10.
-11. Test the SQL code generated by the Data Checks report and ensure that updated fields appear correct, and that records are moved from the dbo schema to the hsdb schema.
-12. File the data sheets and the final Data Checks report in the appropriate binder for your location
+Data Check Decision Tree:
+![Data Check Decision tree](https://github.com/matthewdavis2985/Oyster-Data-Checks/assets/149615191/fdacb0f0-7674-44ee-87d4-a3bd73cbc5d0)
