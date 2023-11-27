@@ -8,7 +8,7 @@ The following information is from the Data Manager's Guide available on the FWRI
 RUNNING DATA CHECKS
 The final step in our data flow involves using R to inspect data for errors. RMarkdown scripts exist for each trip type and lab location . This allows for customization in the error detection process. These scripts can be found in “FWRI Oyster Database Managers” Teams site in the ‘Data Checks’ folder. Make sure you are using the correct script for your trip type and lab location. These scripts must be downloaded to your local machine to run.
 
-All data checks should be run on your local SQL database copy. Lines 7 – 13 contain the variables you should change to ensure the correct dates, estuary, and database copy are being used. 
+All data checks should be run on your local SQL database copy. Chunk 'VariableSet' contains the variables you should set to ensure the correct dates, estuary, and database copy are being used. 
 
 There are two distinct types of errors the data checks will detect: 
 <ol><li>Database Errors. These are errors that are specific to database structure and formatting. These may not be visible to or fixable by ODIN users. However, they MUST be corrected to ensure the database structure.</li> 
