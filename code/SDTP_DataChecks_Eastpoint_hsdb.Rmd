@@ -270,17 +270,17 @@ ERR_Table4a <- SedimentTrap1 %>%
 
 ### DATABASE ERRORS ###
 # Ensure that any field that MUST have a value is not null
-TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(TripID, TripDate, TripType, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate)) %>%
+  select(TripID, TripDate, TripType, Comments)
 
-SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventID, TripID, FixedLocationID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID)) %>%
+  select(SampleEventID, TripID, FixedLocationID, Comments)
 
-SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID)) %>%
+  select(SampleEventWQID, SampleEventID, Comments)
 
-SedimentTrap_nulls <- filter(SedimentTrap1, is.na(CupSampleID) | is.na(SampleEventID) | is.na(DeployedDate) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(CupSampleID, SampleEventID, DeployedDate, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SedimentTrap_nulls <- filter(SedimentTrap1, is.na(CupSampleID) | is.na(SampleEventID) | is.na(DeployedDate)) %>%
+  select(CupSampleID, SampleEventID, DeployedDate, Comments)
 
 # Remove unneeded data frames and values
 
@@ -288,12 +288,12 @@ rm(dboFixedLocations, dest, FixedLocations1, hsdbSedimentTrap, hsdbSampleEvent, 
 
 # Set Error Messages for Database Errors
 
-if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table4 > 0) | nrow(ERR_Table4a > 0)) {
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table4) > 0 | nrow(ERR_Table4a) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(SedimentTrap_nulls) > 0) {
   MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
   MessERR_Tables2 = ""
 } else {
   MessERR_Tables1 = ""
-  MessERR_Tables2 = "Congratulations! No Database errors found. Primary Keys are unique and not childless. Foreign Keys are not orphans and are properly formed. You may proceed."
+  MessERR_Tables2 = "Congratulations! No Database errors found. Primary Keys are unique and not childless. Foreign Keys are not orphans and are properly formed. All critical fields contain data. You may proceed."
 }
 ```
 
@@ -405,6 +405,14 @@ by <p2>`r DataManager`</p2> on
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
 `r if (nrow(ERR_Table4a) > 0) {kable(ERR_Table4a, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
+
+`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SampleEvent_nulls) > 0) {kable(SampleEvent_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SedimentTrap_nulls) > 0) {kable(SedimentTrap_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
 <h2>Data Errors:</h2>
 
