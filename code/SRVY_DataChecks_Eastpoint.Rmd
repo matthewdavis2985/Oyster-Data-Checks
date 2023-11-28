@@ -7,10 +7,10 @@ output:
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-03-28")  # End Date for Checks
+CheckEnd <- as.Date("2023-08-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20230804E"
+Database = "OysterLocalMD20231019"
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -22,6 +22,7 @@ library(dbplyr)
 library(lubridate)
 library(rMR)
 library(scales)
+library(geosphere)
 library(knitr)
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
@@ -109,11 +110,10 @@ DBI::dbDisconnect(con)
 ```{r DataFilters}
 # Filter data frames so that only data collected from Recruitment trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
 FixedLocations1 <- dboFixedLocations %>% 
-  mutate(StationNumber = as.numeric(StationNumber)) %>% 
-  select(FixedLocationID,
-         Estuary,
-         SectionName, 
-         StationNumber) %>% 
+  mutate(StationNumber = as.numeric(StationNumber),
+         FixedLat = LatitudeDec,
+         FixedLon = LongitudeDec) %>% 
+  select(FixedLocationID, Estuary, SectionName, StationNumber, FixedLat, FixedLon) %>% 
   distinct()
           
 TripInfo1 <- dboTripInfo %>% 
@@ -341,9 +341,17 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
   # There are no out of range values for this table
 
 ## SampleEvent #
-  # There are no fields that require a Comment if they are NULL.
-  # There are no out of range values for this table
+  # Unexpected Null values
+null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec) | is.na(LatDec) | is.na(LatMin) | is.na(LongDec) | is.na(LongMin)) %>%
+  select(SampleEventID, LatitudeDec, LongitudeDec, LatDec, LatMin, LongDec, LongMin)
 
+  # Out of range values
+SampleEvent_range <- SampleEvent1 %>%
+  rowwise() %>%
+  mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>%
+  filter(DistFromFixed > 2000) %>%
+  select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed)
+  
 ## Water Quality #
   # Unexpected Null values
 null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>%
