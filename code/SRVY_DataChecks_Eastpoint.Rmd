@@ -283,6 +283,12 @@ for (i in seq_along(sorc)) {
 }
 ERR_Table3 <- distinct(ERR_Table3) 
 
+# Ensure there are 15 quadrats per SampleEvent
+ERR_Table3a <- as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
+  rename("SampleEventID" = "Var1",
+         "NumOfQuads" = "Freq") %>%
+  filter(NumOfQuads != 15)
+
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
 ERR_Table4 <- data.frame()
@@ -324,7 +330,7 @@ rm(dboFixedLocations, dboSurveyQuadrat, dboSurveySH, dboSampleEvent, dboSampleEv
 
 # Set Error Messages for Database Errors
 
-if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(SurveyQuadrat_nulls) > 0 | nrow(SurveySH_nulls) > 0) {
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table3a) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(SurveyQuadrat_nulls) > 0 | nrow(SurveySH_nulls) > 0) {
   MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
   MessERR_Tables2 = ""
 } else {
@@ -415,7 +421,7 @@ SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the numb
   left_join(initialSHmeasurement, by = c("QuadratID")) %>%
   select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) %>%
   filter(NumLive != NumMeasured) %>%
-  filter(!is.na(InitialSH) & NumLive != 0 & NumMeasured != 1) #%>%
+  filter(!is.na(InitialSH) & NumLive != 0 & NumMeasured != 1) %>%
   filter(NumLive > 50 & NumMeasured == 50)
 
 ## Set error messages #
@@ -485,6 +491,8 @@ by <p2>`r DataManager`</p2> on
 `r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
 
 `r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present.")}`
+
+`r if (nrow(ERR_Table3a) > 0) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 15 child records unless a valid comment is present.")}`
 
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
@@ -572,6 +580,7 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(SurveySH_range) > 0) {kable(SurveySH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
 
+`r if (nrow(SHmeasures) > 0) {kable(SHmeasures, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
 
 <h2>SQL Code:</h2>
 
