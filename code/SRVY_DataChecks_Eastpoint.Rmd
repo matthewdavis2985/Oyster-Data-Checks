@@ -404,7 +404,20 @@ null_SurveySH <- filter(SurveySH1, is.na(ShellHeight) & substring(ShellHeightID,
   # Out of range values
 SurveySH_range <- filter(SurveySH1, ShellHeight < 1 | ShellHeight > 150) %>%
   select(ShellHeightID, ShellHeight, Comments) 
-  
+
+  # Check for mismatch in number live and number measured. 
+initialSHmeasurement <- filter(SurveySH1, substring(ShellHeightID, 29, 31) == "001") %>%
+  rename("InitialSH" = "ShellHeight")
+SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
+  rename("QuadratID" = "Var1",
+         "NumMeasured" = "Freq") %>%
+  left_join(SurveyQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
+  left_join(initialSHmeasurement, by = c("QuadratID")) %>%
+  select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) %>%
+  filter(NumLive != NumMeasured) %>%
+  filter(!is.na(InitialSH) & NumLive != 0 & NumMeasured != 1) #%>%
+  filter(NumLive > 50 & NumMeasured == 50)
+
 ## Set error messages #
 
 if (nrow(null_SampleEvents) > 0) {
@@ -425,7 +438,7 @@ if (nrow(null_SurveyQuads) > 0) {
   Mess_null_SurveyQuads = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_SurveySHs) > 0) {
+if (nrow(null_SurveySH) > 0) {
   Mess_null_SurveySHs = ""
 } else {
   Mess_null_SurveySHs = "Congratulations! No unexpected null values detected."
@@ -471,7 +484,7 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
 
-`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! Only exception is on DEPLOY ONLY events.")}`
+`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present.")}`
 
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
@@ -481,7 +494,9 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(Recruitment_nulls) > 0) {kable(Recruitment_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(SurveyQuadrat_nulls) > 0) {kable(SurveyQuadrat_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SurveySH_nulls) > 0) {kable(SurveySH_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
 <h2>Data Errors:</h2>
 
@@ -490,22 +505,40 @@ by <p2>`r DataManager`</p2> on
 The following fields are expected to either contain data or have a
 comment explaining why the data is missing.
 
+<h4>--- Sample Event ---</h4>
+
+<p2>`r Mess_null_SampleEvents`</p2>
+
+`r if (nrow(null_SampleEvents) > 0) {kable(null_SampleEvents, caption = "Null Sample Event Data. Comment Required for all Null values")}`
+
 <h4>--- Water Quality ---</h4>
 
 <p2>`r Mess_null_WQs`</p2>
 
 `r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment Required for all Null values")}`
 
-<h4>--- Recruitment ---</h4>
+<h4>--- Survey Quadrats ---</h4>
 
-<p2>`r Mess_null_Recs`</p2>
+<p2>`r Mess_null_SurveyQuads`</p2>
 
-`r if (nrow(null_Recs) > 0) {kable(null_Recs, caption = "Null Recruitment Data. Comment Required for all Null values")}`
+`r if (nrow(null_SurveyQuads) > 0) {kable(null_SurveyQuads, caption = "Null Survey Quadrat Data. Comment Required for all Null values")}`
+
+<h4>--- Survey Shell Heights ---</h4>
+
+<p2>`r Mess_null_SurveySHs`</p2>
+
+`r if (nrow(null_SurveySH) > 0) {kable(null_SurveySH, caption = "Null Survey Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
 Value ranges below represent historically high or low values. Actual
 values can be outside that range and may or may not require a Comment.
+
+<h4>--- Sample Event ---</h4>
+
+<p2>`r MessSampleEvent_ranges`</p2>
+
+`r if (nrow(SampleEvent_range) > 0) {kable(SampleEvent_range, caption = "Out of range distance from Fixed Location. Expected range is 1,852 meters (1 nautical mile). Comment required for out of range values.")}`
 
 <h4>--- Water Quality ---</h4>
 
@@ -527,13 +560,18 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
 
-<h4>--- Recruitment ---</h4>
+<h4>--- Survey Quadrat ---</h4>
 
-<p2>`r MessRec_ranges`</p2>
+<p2>`r MessSurveyQuad_ranges`</p2>
 
-`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Comment required for out of range values.")}`
+`r if (nrow(SurveyQuad_range) > 0) {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 500. Expected range for NumDead is 0 to 300. Expected range for TotalVolume is 0.05 to 5.0 L. Expected range for TotalWeight is 0.10 to 10.00 kg. Expected range for Volume is 35% to 65% of Weight. Expected range for NumDrills is 0 to 5. Comment required for out of range values.")}`
 
-`r if (nrow(Spat_range) > 0) {kable(Spat_range, caption = "Out of range Spat count data. Expected range is 0 to 50 spat. Comment required for out of range values.")}`
+<h4>--- Survey Shell Heights ---</h4>
+
+<p2>`r MessSurveySH_ranges`</p2>
+
+`r if (nrow(SurveySH_range) > 0) {kable(SurveySH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
+
 
 <h2>SQL Code:</h2>
 
