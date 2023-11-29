@@ -147,7 +147,8 @@ SurveyQuadrat1 <- dboSurveyQuadrat %>%
 
 SurveySH1 <- dboSurveySH %>% 
   mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(QuadratID, 19, 22)) %>%
+         FixedLocationID = substring(QuadratID, 19, 22),
+         ShellHeight = as.numeric(ShellHeight)) %>% # Datatype in database is varchar due to weird PowerApps bug
   filter(substring(QuadratID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(QuadratID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SurveyQuadrat1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, ShellHeightID)
@@ -349,7 +350,7 @@ null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDe
 SampleEvent_range <- SampleEvent1 %>%
   rowwise() %>%
   mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>%
-  filter(DistFromFixed > 2000) %>%
+  filter(DistFromFixed > 1852) %>% # Flags SampleEvents that occur over 1,852 meters (1 nautical mile) from the assigned FixedLocation.  
   select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed)
   
 ## Water Quality #
@@ -380,24 +381,37 @@ TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 
 TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
 
-## Recruitment #
+## SurveyQuadrat #
   # Unexpected Null values
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
-Recruitment1$Comments <- ifelse(nchar(Recruitment1$Comments) == 0, NA, Recruitment1$Comments) 
-null_Recs <- filter(Recruitment1, is.na(NumBottom) & !is.na(Comments) & (ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11)) %>%
-  select(TripDate, DeployedDate, StationNumber, ShellReplicate, ShellPosition, NumBottom, Comments)
+SurveyQuadrat1$Comments <- ifelse(nchar(SurveyQuadrat1$Comments) == 0, NA, SurveyQuadrat1$Comments) 
+null_SurveyQuads <- filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.na(TotalVolume) | is.na(TotalWeight) | is.na(NumDrills) & !is.na(Comments)) %>%
+  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
 
   # Out of range values
-Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
-  select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate, Comments) %>%
-  distinct()
-# Code above reduces the number of records outside of the range by showing only distinct. If you need to view ALL records affected, substitute with the commented out code below.
-# Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
-#   select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate, Comments)
+SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | TotalVolume < 0.05 | TotalVolume > 5.0 | TotalWeight < 0.1 | TotalWeight > 10.00 | TotalVolume < TotalWeight*0.35 | TotalVolume > TotalWeight*0.65 | NumDrills < 0 | NumDrills > 5) %>%
+  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments) 
 
-Spat_range <- filter(Recruitment1, NumBottom > 50) %>%
-  select(TripDate, DeployedDate, StationNumber, ShellReplicate, ShellPosition, NumBottom, Comments)
+## SurveySH #
+  # Unexpected Null values
+
+# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
+SurveySH1$Comments <- ifelse(nchar(SurveySH1$Comments) == 0, NA, SurveySH1$Comments) 
+null_SurveySH <- filter(SurveySH1, is.na(ShellHeight) & substring(ShellHeightID, 29, 32) != "001") %>%
+  select(ShellHeightID, ShellHeight, Comments)
+
+  # Out of range values
+SurveySH_range <- filter(SurveySH1, ShellHeight < 1 | ShellHeight > 150) %>%
+  select(ShellHeightID, ShellHeight, Comments) 
+  
+## Set error messages #
+
+if (nrow(null_SampleEvents) > 0) {
+  Mess_null_SampleEvents = ""
+} else {
+  Mess_null_SampleEvents = "Congratulations! No unexpected null values detected."
+}
   
 if (nrow(null_WQs) > 0) {
   Mess_null_WQs = ""
@@ -405,10 +419,22 @@ if (nrow(null_WQs) > 0) {
   Mess_null_WQs = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_Recs) > 0) {
-  Mess_null_Recs = ""
+if (nrow(null_SurveyQuads) > 0) {
+  Mess_null_SurveyQuads = ""
 } else {
-  Mess_null_Recs = "Congratulations! No unexpected null values detected."
+  Mess_null_SurveyQuads = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(null_SurveySHs) > 0) {
+  Mess_null_SurveySHs = ""
+} else {
+  Mess_null_SurveySHs = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(SampleEvent_range) > 0) {
+  MessSampleEvent_ranges = ""
+} else {
+  MessSampleEvent_ranges = "Congratulations! No out of range values detected."
 }
 
 if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
@@ -417,10 +443,16 @@ if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_ra
   MessWQ_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(Days_range) > 0 & nrow(Spat_range) > 0) {
-  MessRec_ranges = ""
+if (nrow(SurveyQuad_range) > 0) {
+  MessSurveyQuad_ranges = ""
 } else {
-  MessRec_ranges = "Congratulations! No out of range values detected."
+  MessSurveyQuad_ranges = "Congratulations! No out of range values detected."
+}
+
+if (nrow(SurveySH_range) > 0) {
+  MessSurveySH_ranges = ""
+} else {
+  MessSurveySH_ranges = "Congratulations! No out of range values detected."
 }
 ```
 
