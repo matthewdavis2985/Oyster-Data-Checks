@@ -209,14 +209,14 @@ if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
     select(schema, Table, PrimaryKey)
 }
 
-if (nrow(SurveyQuadrat1[duplicated(SurveyQuadrat1$QuadratID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SurveyQuadrat", SurveyQuadrat1[duplicated(SurveyQuadrat1$QuadratID), ])) %>% 
+if (nrow(ShellBudgetQuadrat1[duplicated(ShellBudgetQuadrat1$QuadratID), ]) > 0) {
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "ShellBudgetQuadrat", ShellBudgetQuadrat1[duplicated(ShellBudgetQuadrat1$QuadratID), ])) %>% 
     mutate(PrimaryKey = QuadratID) %>%
     select(schema, Table, PrimaryKey)
 }
 
-if (nrow(SurveySH1[duplicated(SurveySH1$ShellHeightID), ]) > 0) {
-  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SurveySH", SurveySH1[duplicated(SurveySH1$ShellHeightID), ])) %>% 
+if (nrow(ShellBudgetSH1[duplicated(ShellBudgetSH1$ShellHeightID), ]) > 0) {
+  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "ShellBudgetSH", ShellBudgetSH1[duplicated(ShellBudgetSH1$ShellHeightID), ])) %>% 
     mutate(PrimaryKey = ShellHeightID) %>%
     select(schema, Table, PrimaryKey)
 }
@@ -224,9 +224,9 @@ if (nrow(SurveySH1[duplicated(SurveySH1$ShellHeightID), ]) > 0) {
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are unique in the hsdb schema
 ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSurveyQuadrat$QuadratID, hsdbSurveySH$ShellHeightID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, ShellBudgetQuadrat1$QuadratID, ShellBudgetSH1$ShellHeightID)
+dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbShellBudgetQuadrat$QuadratID, hsdbShellBudgetSH$ShellHeightID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "ShellBudgetQuadrat", "ShellBudgetSH")
 
 # Loop through values
 for (i in seq_along(sorc)) {
@@ -248,9 +248,9 @@ rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
 # Ensure the Foreign Keys are not orphans
 # Create an empty data frame ERR_Table
 ERR_Table2 <- data.frame()
-sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, SurveyQuadrat1$SampleEventID, SurveySH1$QuadratID)
-dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SurveyQuadrat1$QuadratID)
-tabl <- list("SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, ShellBudgetQuadrat1$SampleEventID, ShellBudgetSH1$QuadratID)
+dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, ShellBudgetQuadrat1$QuadratID)
+tabl <- list("SampleEvent", "SampleEventWQ", "ShellBudgetQuadrat", "ShellBudgetSH")
 
 # Loop through SampleEvent$TripID values
 for (i in seq_along(sorc)) {
@@ -268,9 +268,9 @@ ERR_Table2 <- distinct(ERR_Table2)
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
 ERR_Table3 <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SurveyQuadrat1$QuadratID)
-dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, SurveyQuadrat1$SampleEventID, SurveySH1$QuadratID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "SurveyQuadrat")
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, ShellBudgetQuadrat1$QuadratID)
+dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, ShellBudgetQuadrat1$SampleEventID, ShellBudgetSH1$QuadratID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "ShellBudgetQuadrat")
 
 # Loop through SampleEvent$TripID values
 for (i in seq_along(sorc)) {
@@ -284,7 +284,7 @@ for (i in seq_along(sorc)) {
 ERR_Table3 <- distinct(ERR_Table3) 
 
 # Ensure there are 15 quadrats per SampleEvent
-ERR_Table3a <- as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
+ERR_Table3a <- as.data.frame(table(ShellBudgetQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
   rename("SampleEventID" = "Var1",
          "NumOfQuads" = "Freq") %>%
   filter(NumOfQuads != 15)
@@ -292,9 +292,9 @@ ERR_Table3a <- as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts u
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
 ERR_Table4 <- data.frame()
-pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
-fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, SurveyQuadrat1$SampleEventID, SurveySH1$QuadratID)
-tabl <- list("SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, ShellBudgetQuadrat1$QuadratID, ShellBudgetSH1$ShellHeightID)
+fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, ShellBudgetQuadrat1$SampleEventID, ShellBudgetSH1$QuadratID)
+tabl <- list("SampleEvent", "SampleEventWQ", "ShellBudgetQuadrat", "ShellBudgetSH")
 numb <- list(17, 24, 24, 27)
 
 for (i in seq_along(pkid)) {
