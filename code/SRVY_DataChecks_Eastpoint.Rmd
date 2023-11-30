@@ -595,7 +595,7 @@ BEFORE executing it on fwcsqlint.</p2>
 
 \~\~\~\~ Note to self: The bulk of this code may be better as a Stored
 Procedure. Then the SQL Code here would be:\
-EXEC sp_CompleteRecruitment \'`r EstuaryCode`\', \'`r CheckStart`\',
+EXEC sp_CompleteSurvey \'`r EstuaryCode`\', \'`r CheckStart`\',
 \'`r CheckEnd`\', \'`r DataManager`\';
 
 \~\~\~\~ SQL code with comments in un-run chunk at end.
