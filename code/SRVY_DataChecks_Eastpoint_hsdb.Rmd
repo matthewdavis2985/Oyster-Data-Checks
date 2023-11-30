@@ -76,32 +76,17 @@ dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
 hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
   collect() 
 
-dboTripInfo <- tbl(con,in_schema("dbo", "TripInfo")) %>%
-  collect() 
-  
 hsdbSampleEvent <- tbl(con,in_schema("hsdb", "SampleEvent")) %>%
-  collect() 
-  
-dboSampleEvent <- tbl(con,in_schema("dbo", "SampleEvent")) %>%
   collect() 
 
 hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
   collect() 
 
-dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
-  collect() 
-
 hsdbSurveyQuadrat <- tbl(con,in_schema("hsdb", "SurveyQuadrat")) %>%
   collect() 
 
-dboSurveyQuadrat <- tbl(con,in_schema("dbo", "SurveyQuadrat")) %>%
-  collect()
-
 hsdbSurveySH <- tbl(con,in_schema("hsdb", "SurveySH")) %>%
   collect() 
-
-dboSurveySH <- tbl(con,in_schema("dbo", "SurveySH")) %>%
-  collect()
 
 DBI::dbDisconnect(con)
 
@@ -116,7 +101,7 @@ FixedLocations1 <- dboFixedLocations %>%
   select(FixedLocationID, Estuary, SectionName, StationNumber, FixedLat, FixedLon) %>% 
   distinct()
           
-TripInfo1 <- dboTripInfo %>% 
+TripInfo1 <- hsdbTripInfo %>% 
   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(TripID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
   arrange(TripID)
 
@@ -124,28 +109,28 @@ TripInfo2 <- TripInfo1 %>%
   select(TripID, TripDate, Comments) %>%
   arrange(TripID)
 
-SampleEvent1 <- dboSampleEvent %>% 
+SampleEvent1 <- hsdbSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber)
 
-SampleEventWQ1 <- dboSampleEventWQ %>% 
+SampleEventWQ1 <- hsdbSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
-SurveyQuadrat1 <- dboSurveyQuadrat %>% 
+SurveyQuadrat1 <- hsdbSurveyQuadrat %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(QuadratID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SurveyQuadrat1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, QuadratID)
 
-SurveySH1 <- dboSurveySH %>% 
+SurveySH1 <- hsdbSurveySH %>% 
   mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(QuadratID, 19, 22),
          ShellHeight = as.numeric(ShellHeight)) %>% # Datatype in database is varchar due to weird PowerApps bug
@@ -153,37 +138,37 @@ SurveySH1 <- dboSurveySH %>%
   left_join(FixedLocations1, SurveyQuadrat1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, ShellHeightID)
 
-hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(TripID,3,6) == "SRVY")  %>%
-  arrange(TripID)
-
-hsdbSampleEvent <- hsdbSampleEvent %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SRVY") %>%
-  arrange(TripDate)
-
-hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
-  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SRVY") %>%
-  arrange(TripDate)
-
-hsdbSurveyQuadrat <- hsdbSurveyQuadrat %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(QuadratID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
-  arrange(TripDate)
-
-hsdbSurveySH <- hsdbSurveySH %>% 
-  mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(QuadratID, 19, 22)) %>%
-  filter(substring(QuadratID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(QuadratID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
-  arrange(TripDate)
+# hsdbTripInfo <- hsdbTripInfo %>% 
+#   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(TripID,3,6) == "SRVY")  %>%
+#   arrange(TripID)
+# 
+# hsdbSampleEvent <- hsdbSampleEvent %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SRVY") %>%
+#   arrange(TripDate)
+# 
+# hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SRVY") %>%
+#   arrange(TripDate)
+# 
+# hsdbSurveyQuadrat <- hsdbSurveyQuadrat %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+#          FixedLocationID = substring(QuadratID, 19, 22)) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+#   arrange(TripDate)
+# 
+# hsdbSurveySH <- hsdbSurveySH %>% 
+#   mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
+#          FixedLocationID = substring(QuadratID, 19, 22)) %>%
+#   filter(substring(QuadratID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(QuadratID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+#   arrange(TripDate)
 
 ```
 
 ```{r DatabaseErrors}
 ### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the dbo schema
+# Ensure the Primary Keys are unique in the hsdb schema
 ERR_Table1 <- data.frame()
 ERR_Table1a <- data.frame()
 ERR_Table1b <- data.frame()
@@ -223,25 +208,25 @@ if (nrow(SurveySH1[duplicated(SurveySH1$ShellHeightID), ]) > 0) {
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are unique in the hsdb schema
-ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSurveyQuadrat$QuadratID, hsdbSurveySH$ShellHeightID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+# ERR_Tablex <- data.frame()
+# sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
+# dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSurveyQuadrat$QuadratID, hsdbSurveySH$ShellHeightID)
+# tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+# 
+# # Loop through values
+# for (i in seq_along(sorc)) {
+#   for (j in seq_along(sorc[[i]])) {
+#     check_id <- sorc[[i]][j]
+#   # Check if the trip_id exists in TripInfo$TripID
+#     if ((check_id %in% dest[[i]])) {
+#     # Add trip_id to ERR_Table
+#       ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
+#     }
+#   }
+# }
 
-# Loop through values
-for (i in seq_along(sorc)) {
-  for (j in seq_along(sorc[[i]])) {
-    check_id <- sorc[[i]][j]
-  # Check if the trip_id exists in TripInfo$TripID
-    if ((check_id %in% dest[[i]])) {
-    # Add trip_id to ERR_Table
-      ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-    }
-  }
-}
-
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
-rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
 
 
 ### DATABASE ERRORS ###
@@ -326,7 +311,7 @@ SurveySH_nulls <- filter(SurveySH1, is.na(QuadratID) | is.na(QuadratID) | is.na(
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboSurveyQuadrat, dboSurveySH, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbSurveyQuadrat, hsdbSurveySH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dboFixedLocations, dest, FixedLocations1, hsdbSurveyQuadrat, hsdbSurveySH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
@@ -587,15 +572,14 @@ values can be outside that range and may or may not require a Comment.
 If there are no Database Errors detected and all Data Errors have been
 addressed, you may use the following SQL code to Complete these data.
 This code will update the DataStatus, CompletedBy, and DateCompleted
-fields; it will copy the data to the hsdb schema; and it will remove the
-data from the dbo schema.
+fields in the hsdb schema.
 
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
 \~\~\~\~ Note to self: The bulk of this code may be better as a Stored
 Procedure. Then the SQL Code here would be:\
-EXEC sp_CompleteSurvey \'`r EstuaryCode`\', \'`r CheckStart`\',
+EXEC sp_CompleteSurvey_hsdb \'`r EstuaryCode`\', \'`r CheckStart`\',
 \'`r CheckEnd`\', \'`r DataManager`\';
 
 \~\~\~\~ SQL code with comments in un-run chunk at end.
@@ -607,58 +591,33 @@ IF OBJECT_ID(\'tempdb..#ValidTrips\') IS NOT NULL BEGIN DROP TABLE
 
 CREATE TABLE #ValidTrips ( TripID VARCHAR(50) );
 
-INSERT INTO #ValidTrips (TripID) SELECT TripID FROM TripInfo WHERE
+INSERT INTO #ValidTrips (TripID) SELECT hsdb.TripID FROM TripInfo WHERE
 TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
 DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`SRVY%\';
 
-UPDATE TripInfo SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.TripInfo SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
-UPDATE SampleEvent SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.SampleEvent SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d.%B.%Y")`\'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
-UPDATE SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
-UPDATE SurveyQuadrat SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.SurveyQuadrat SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
-UPDATE SurveySH SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.SurveySH SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE QuadratID IN (SELECT QuadratID FROM SurveyQuadrat WHERE 
 SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips)));
-
-INSERT INTO hsdb.TripInfo SELECT \* FROM TripInfo WHERE DataStatus =
-\'Completed\';
-
-DELETE FROM dbo.TripInfo WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SampleEvent SELECT \* FROM SampleEvent WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.SampleEvent WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SampleEventWQ SELECT \* FROM SampleEventWQ WHERE
-DataStatus = \'Completed\';
-
-DELETE FROM dbo.SampleEventWQ WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SurveyQuadrat SELECT \* FROM SurveyQuadrat WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.SurveyQuadrat WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SurveySH SELECT \* FROM SurveySH WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.SurveySH WHERE DataStatus = \'Completed\';
 
 `r knit_exit()`
 
@@ -676,54 +635,33 @@ CREATE TABLE #ValidTrips (
 
 INSERT INTO #ValidTrips (TripID)
 SELECT TripID
-FROM TripInfo
+FROM hsdb.TripInfo
 WHERE TripDate > '`r CheckStart`' AND TripDate < '`r CheckEnd`'
 AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`SRVY%';
 
 -- Query the TripInfo table using the temporary table
-UPDATE TripInfo 
+UPDATE hsdb.TripInfo 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 -- Query the SampleEvent table using the temporary table
-UPDATE SampleEvent 
+UPDATE hsdb.SampleEvent 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d.%B.%Y")`'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 -- Query the SampleEventWQ table using the temporary table
-UPDATE SampleEventWQ 
+UPDATE hsdb.SampleEventWQ 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
 -- Query the SurveyQuadrat table using the temporary table
-UPDATE SurveyQuadrat 
+UPDATE hsdb.SurveyQuadrat 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
 -- Query the SurveySH table using the temporary table
-UPDATE SurveySH 
+UPDATE hsdb.SurveySH 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE QuadratID IN (SELECT QuadratID FROM SurveyQuadrat WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
-
--- Insert the Completed data into hsdb, and DELETE FROM dbo
-INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SurveyQuadrat SELECT * FROM SurveyQuadrat WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SurveyQuadrat WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SurveySH SELECT * FROM SurveySH WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SurveySH WHERE DataStatus = 'Completed';
 
 ```
