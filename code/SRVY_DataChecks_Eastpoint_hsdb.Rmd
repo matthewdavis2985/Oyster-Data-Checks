@@ -76,32 +76,17 @@ dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
 hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
   collect() 
 
-dboTripInfo <- tbl(con,in_schema("dbo", "TripInfo")) %>%
-  collect() 
-  
 hsdbSampleEvent <- tbl(con,in_schema("hsdb", "SampleEvent")) %>%
-  collect() 
-  
-dboSampleEvent <- tbl(con,in_schema("dbo", "SampleEvent")) %>%
   collect() 
 
 hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
   collect() 
 
-dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
-  collect() 
-
 hsdbSurveyQuadrat <- tbl(con,in_schema("hsdb", "SurveyQuadrat")) %>%
   collect() 
 
-dboSurveyQuadrat <- tbl(con,in_schema("dbo", "SurveyQuadrat")) %>%
-  collect()
-
 hsdbSurveySH <- tbl(con,in_schema("hsdb", "SurveySH")) %>%
   collect() 
-
-dboSurveySH <- tbl(con,in_schema("dbo", "SurveySH")) %>%
-  collect()
 
 DBI::dbDisconnect(con)
 
