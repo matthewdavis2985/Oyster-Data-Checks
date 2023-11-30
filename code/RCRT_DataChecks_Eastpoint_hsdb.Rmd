@@ -502,7 +502,7 @@ TripID IN (SELECT TripID FROM #ValidTrips));
 
 `r knit_exit()`
 
-```{sql, eval = FALSE}
+```{sql SQL code, eval=FALSE, include=FALSE}
 
 -- Check that there is not already a temporary table to store valid TripIDs. If there is, DELETE it and create a clean temporary table
 IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
@@ -539,6 +539,5 @@ WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (S
 UPDATE hsdb.Recruitment 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%Y-%m-%d")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
-
 
 ```
