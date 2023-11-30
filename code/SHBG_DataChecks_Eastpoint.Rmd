@@ -1,5 +1,5 @@
 ---
-title: "Survey Data Checks"
+title: "Shell Budget Survey Data Checks"
 output:
   html_document:
 ---
@@ -91,16 +91,16 @@ hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
 dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
   collect() 
 
-hsdbSurveyQuadrat <- tbl(con,in_schema("hsdb", "SurveyQuadrat")) %>%
+hsdbShellBudgetQuadrat <- tbl(con,in_schema("hsdb", "ShellBudgetQuadrat")) %>%
   collect() 
 
-dboSurveyQuadrat <- tbl(con,in_schema("dbo", "SurveyQuadrat")) %>%
+dboShellBudgetQuadrat <- tbl(con,in_schema("dbo", "ShellBudgetQuadrat")) %>%
   collect()
 
-hsdbSurveySH <- tbl(con,in_schema("hsdb", "SurveySH")) %>%
+hsdbShellBudgetSH <- tbl(con,in_schema("hsdb", "ShellBudgetSH")) %>%
   collect() 
 
-dboSurveySH <- tbl(con,in_schema("dbo", "SurveySH")) %>%
+dboShellBudgetSH <- tbl(con,in_schema("dbo", "ShellBudgetSH")) %>%
   collect()
 
 DBI::dbDisconnect(con)
