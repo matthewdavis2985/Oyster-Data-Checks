@@ -168,7 +168,7 @@ SurveySH1 <- hsdbSurveySH %>%
 
 ```{r DatabaseErrors}
 ### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the dbo schema
+# Ensure the Primary Keys are unique in the hsdb schema
 ERR_Table1 <- data.frame()
 ERR_Table1a <- data.frame()
 ERR_Table1b <- data.frame()
@@ -208,25 +208,25 @@ if (nrow(SurveySH1[duplicated(SurveySH1$ShellHeightID), ]) > 0) {
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are unique in the hsdb schema
-ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSurveyQuadrat$QuadratID, hsdbSurveySH$ShellHeightID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+# ERR_Tablex <- data.frame()
+# sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
+# dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSurveyQuadrat$QuadratID, hsdbSurveySH$ShellHeightID)
+# tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+# 
+# # Loop through values
+# for (i in seq_along(sorc)) {
+#   for (j in seq_along(sorc[[i]])) {
+#     check_id <- sorc[[i]][j]
+#   # Check if the trip_id exists in TripInfo$TripID
+#     if ((check_id %in% dest[[i]])) {
+#     # Add trip_id to ERR_Table
+#       ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
+#     }
+#   }
+# }
 
-# Loop through values
-for (i in seq_along(sorc)) {
-  for (j in seq_along(sorc[[i]])) {
-    check_id <- sorc[[i]][j]
-  # Check if the trip_id exists in TripInfo$TripID
-    if ((check_id %in% dest[[i]])) {
-    # Add trip_id to ERR_Table
-      ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-    }
-  }
-}
-
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
-rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
 
 
 ### DATABASE ERRORS ###
@@ -311,7 +311,7 @@ SurveySH_nulls <- filter(SurveySH1, is.na(QuadratID) | is.na(QuadratID) | is.na(
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboSurveyQuadrat, dboSurveySH, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbSurveyQuadrat, hsdbSurveySH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dboFixedLocations, dest, FixedLocations1, hsdbSurveyQuadrat, hsdbSurveySH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
