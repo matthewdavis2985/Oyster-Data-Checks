@@ -482,15 +482,15 @@ if (nrow(null_WQs) > 0) {
 }
 
 if (nrow(null_ShellBudgetQuads1) > 0| nrow(null_ShellBudgetQuads2) > 0) {
-  Mess_null_SurveyQuads = ""
+  Mess_null_ShellBudgetQuads = ""
 } else {
-  Mess_null_SurveyQuads = "Congratulations! No unexpected null values detected."
+  Mess_null_ShellBudgetQuads = "Congratulations! No unexpected null values detected."
 }
 
 if (nrow(null_ShellBudgetSH) > 0) {
-  Mess_null_SurveySHs = ""
+  Mess_null_ShellBudgetSHs = ""
 } else {
-  Mess_null_SurveySHs = "Congratulations! No unexpected null values detected."
+  Mess_null_ShellBudgetSHs = "Congratulations! No unexpected null values detected."
 }
 
 if (nrow(SampleEvent_range) > 0) {
@@ -506,15 +506,15 @@ if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_ra
 }
 
 if (nrow(ShellBudgetQuad_range1) > 0 | nrow(ShellBudgetQuad_range2) > 0 | nrow(ShellBudgetQuad_range3) > 0 | nrow(ShellBudgetQuad_range4) > 0) {
-  MessSurveyQuad_ranges = ""
+  MessShellBudgetQuad_ranges = ""
 } else {
-  MessSurveyQuad_ranges = "Congratulations! No out of range values detected."
+  MessShellBudgetQuad_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(SurveySH_range) > 0 | nrow(SHmeasures_live) > 0 | nrow(SHmeasures_dead) > 0) {
-  MessSurveySH_ranges = ""
+if (nrow(ShellBudgetSH_range) > 0 | nrow(SHmeasures_live) > 0 | nrow(SHmeasures_dead) > 0) {
+  MessShellBudgetSH_ranges = ""
 } else {
-  MessSurveySH_ranges = "Congratulations! No out of range values detected."
+  MessShellBudgetSH_ranges = "Congratulations! No out of range values detected."
 }
 ```
 
