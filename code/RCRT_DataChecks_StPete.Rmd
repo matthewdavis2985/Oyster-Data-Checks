@@ -9,7 +9,7 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
 CheckEnd <- as.Date("2023-10-31")  # End Date for Checks
-EstuaryCode = "CR"  # Estuary Code. Use 2-letter code in Primary Keys
+EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
 Database = "OystersEL_231201"
 ```
@@ -318,7 +318,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 
 ## Water Quality #
   # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>% filter(!grepl(paste(c("ame as", "ame WQ"), collapse = '|'), SampleEventWQ1$Comments)) %>%
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>% filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), SampleEventWQ1$Comments)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
 
   # Out of range values
