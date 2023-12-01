@@ -318,7 +318,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 
 ## Water Quality #
   # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>% filter(!grepl("ame as", SampleEventWQ1$Comments, fixed = TRUE)) %>%
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>% filter(!grepl(paste(c("ame as", "ame WQ"), collapse = '|'), SampleEventWQ1$Comments)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
 
   # Out of range values
