@@ -357,7 +357,7 @@ null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDe
 SampleEvent_range <- SampleEvent1 %>%
   rowwise() %>%
   mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>%
-  filter(DistFromFixed > 1852) %>% # Flags SampleEvents that occur over 1,852 meters (1 nautical mile) from the assigned FixedLocation.  
+  filter(DistFromFixed > 138) %>% # Flags SampleEvents that occur over 138 meters from the assigned corner of the FixedLocation. This is much closer than Survey, because the 2 acre plots are much smaller
   select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed)
   
 ## Water Quality #
@@ -388,42 +388,84 @@ TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 
 TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
 
-## SurveyQuadrat #
+## ShellBudgetQuadrat # 
   # Unexpected Null values
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
-SurveyQuadrat1$Comments <- ifelse(nchar(SurveyQuadrat1$Comments) == 0, NA, SurveyQuadrat1$Comments) 
-null_SurveyQuads <- filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.na(TotalVolume) | is.na(TotalWeight) | is.na(NumDrills) & !is.na(Comments)) %>%
-  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
+ShellBudgetQuadrat1$Comments <- ifelse(nchar(ShellBudgetQuadrat1$Comments) == 0, NA, ShellBudgetQuadrat1$Comments) 
+
+null_ShellBudgetQuads1 <- filter(ShellBudgetQuadrat1, is.na(TotalSampleWeight) | is.na(TotalSampleVolume) | is.na(LiveOysterWeight) | is.na(LiveOysterVolume) | is.na(NumDrills) | is.na(NumLiveOysters) | is.na(NumDeadOysters) & !is.na(Comments)) %>%
+  select(QuadratID, TotalSampleWeight, TotalSampleVolume, LiveOysterWeight, LiveOysterVolume, NumDrills, NumLiveOysters, NumDeadOysters, Comments)
+
+null_ShellBudgetQuads2 <- filter(ShellBudgetQuadrat1, is.na(OysterShellWeight) | is.na(OysterShellVolume) | is.na(PlantedShellWeight) | is.na(PlantedShellVolume) | is.na(ShellHashWeight) | is.na(ShellHashVolume) | is.na(BlackAndOtherSubstrateWeight) | is.na(BlackAndOtherSubstrateVolume) & !is.na(Comments)) %>%
+  select(QuadratID, OysterShellWeight, OysterShellVolume, PlantedShellWeight, PlantedShellVolume, ShellHashWeight, ShellHashVolume, BlackAndOtherSubstrateWeight, BlackAndOtherSubstrateVolume, Comments) # Too many columns to display in one table, so had to split into two
 
   # Out of range values
-SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | TotalVolume < 0.05 | TotalVolume > 5.0 | TotalWeight < 0.1 | TotalWeight > 10.00 | TotalVolume < TotalWeight*0.35 | TotalVolume > TotalWeight*0.65 | NumDrills < 0 | NumDrills > 5) %>%
-  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments) 
+ShellBudgetQuad_range1 <- filter(ShellBudgetQuadrat1, TotalSampleWeight < 0.1 | TotalSampleWeight > 16.00 | TotalSampleVolume < 0.05 | TotalSampleVolume > 8.0 | LiveOysterWeight < 0 | LiveOysterWeight > 4.00 | LiveOysterVolume < 0 | LiveOysterVolume > 2.0 | NumDrills < 0 | NumDrills > 5 | DrillWeight < 0 | DrillWeight > 0.1 | OtherBiotaWeight < 0 | OtherBiotaWeight > 0.2 | NumLiveOysters < 0 | NumLiveOysters > 1000 | NumDeadOysters < 0 | NumDeadOysters > 500) %>%
+  select(QuadratID, TotalSampleWeight, TotalSampleVolume, LiveOysterWeight, LiveOysterVolume, NumDrills, DrillWeight, OtherBiotaWeight, NumLiveOysters, NumDeadOysters, Comments) #Absolute ranges for top part of data sheet
 
-## SurveySH #
+ShellBudgetQuad_range2 <- filter(ShellBudgetQuadrat1, OysterShellWeight < 0 | OysterShellWeight > 4.0 | OysterShellVolume < 0 | OysterShellVolume > 2.0 | PlantedShellWeight < 0 | PlantedShellWeight > 10.00 | PlantedShellVolume < 0 | PlantedShellVolume > 5.0 | ShellHashWeight < 0 | ShellHashWeight > 2.0 | ShellHashVolume < 0 | ShellHashVolume > 1.0 | BlackAndOtherSubstrateWeight < 0 | BlackAndOtherSubstrateWeight > 1.0 | BlackAndOtherSubstrateVolume < 0 | BlackAndOtherSubstrateVolume > 0.5) %>%
+  select(QuadratID, OysterShellWeight, OysterShellVolume, PlantedShellWeight, PlantedShellVolume, ShellHashWeight, ShellHashVolume, BlackAndOtherSubstrateWeight, BlackAndOtherSubstrateVolume, Comments) #Absolute ranges for for Cultch Weight and Volume
+
+ShellBudgetQuad_range3 <- ShellBudgetQuadrat1 %>%
+  mutate(Calc.Tot.Wt = LiveOysterWeight + DrillWeight + OtherBiotaWeight + OysterShellWeight + PlantedShellWeight + ShellHashWeight + BlackAndOtherSubstrateWeight,
+         Calc.Tot.Vol = LiveOysterVolume + OysterShellVolume + PlantedShellVolume + ShellHashVolume + BlackAndOtherSubstrateVolume) %>%
+  filter(TotalSampleWeight < Calc.Tot.Wt*0.9 | TotalSampleWeight > Calc.Tot.Wt*1.1 | TotalSampleVolume < Calc.Tot.Vol*0.8 | TotalSampleVolume > Calc.Tot.Vol*1.2) %>%
+  select(QuadratID, TotalSampleWeight, Calc.Tot.Wt, TotalSampleVolume, Calc.Tot.Vol, Comments) #Relative ranges as a part of the whole
+
+ShellBudgetQuad_range4 <- filter(ShellBudgetQuadrat1, 
+                    TotalSampleVolume < TotalSampleWeight*0.35 | TotalSampleVolume > TotalSampleWeight*0.65 | 
+                    LiveOysterVolume < LiveOysterWeight*0.35 | LiveOysterVolume > LiveOysterWeight*0.65 | 
+                    OysterShellVolume < OysterShellWeight*0.35 | OysterShellVolume > OysterShellWeight*0.65 |
+                    PlantedShellVolume < PlantedShellWeight*0.35 | PlantedShellVolume > PlantedShellWeight*0.65 |
+                    ShellHashVolume < ShellHashWeight*0.35 | ShellHashVolume > ShellHashWeight*0.65 |
+                    BlackAndOtherSubstrateVolume < BlackAndOtherSubstrateWeight*0.35 | BlackAndOtherSubstrateVolume > BlackAndOtherSubstrateWeight*0.65) %>%
+  select(QuadratID, TotalSampleWeight, TotalSampleVolume, LiveOysterWeight, LiveOysterVolume, OysterShellWeight, OysterShellVolume, PlantedShellWeight, PlantedShellVolume, ShellHashWeight, ShellHashVolume, BlackAndOtherSubstrateWeight, BlackAndOtherSubstrateVolume, Comments) #Relative ranges on an individual basis
+
+## ShellBudgetSH #
   # Unexpected Null values
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
-SurveySH1$Comments <- ifelse(nchar(SurveySH1$Comments) == 0, NA, SurveySH1$Comments) 
-null_SurveySH <- filter(SurveySH1, is.na(ShellHeight) & substring(ShellHeightID, 29, 32) != "001") %>%
-  select(ShellHeightID, ShellHeight, Comments)
+ShellBudgetSH1$Comments <- ifelse(nchar(ShellBudgetSH1$Comments) == 0, NA, ShellBudgetSH1$Comments) 
+
+null_ShellBudgetSH <- filter(ShellBudgetSH1, is.na(ShellHeight) & substring(ShellHeightID, 29, 32) != "001") %>%
+  select(ShellHeightID, LiveOrDead, ShellHeight, Comments)
 
   # Out of range values
-SurveySH_range <- filter(SurveySH1, ShellHeight < 1 | ShellHeight > 150) %>%
-  select(ShellHeightID, ShellHeight, Comments) 
+ShellBudgetSH_range <- filter(ShellBudgetSH1, ShellHeight < 1 | ShellHeight > 150) %>%
+  select(ShellHeightID, LiveOrDead, ShellHeight, Comments) 
 
-  # Check for mismatch in number live and number measured. 
-initialSHmeasurement <- filter(SurveySH1, substring(ShellHeightID, 29, 31) == "001") %>%
+  # Check for mismatch in number live counted and number measured. 
+initialSHmeasurement_live <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "001") %>%
   rename("InitialSH" = "ShellHeight")
-SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
+
+SHmeasures_live <- as.data.frame(table(ShellBudgetSH1$QuadratID, ShellBudgetSH1$LiveOrDead)) %>% # Counts up the number of SH measurements that were made
   rename("QuadratID" = "Var1",
+         "LiveOrDead" = "Var2",
          "NumMeasured" = "Freq") %>%
-  left_join(SurveyQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
-  left_join(initialSHmeasurement, by = c("QuadratID")) %>%
-  select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) %>%
-  filter(NumLive != NumMeasured) %>%
-  filter(!is.na(InitialSH) & NumLive != 0 & NumMeasured != 1) %>%
-  filter(NumLive > 50 & NumMeasured == 50)
+  filter(LiveOrDead == "Live") %>%
+  right_join(ShellBudgetQuadrat1, initialSHmeasurement_live, by = c("QuadratID")) %>%
+  left_join(initialSHmeasurement_live, by = c("QuadratID")) %>%
+  select(QuadratID, QuadratNumber, NumLiveOysters, NumMeasured, InitialSH, Comments.x) %>%
+  filter(NumLiveOysters != NumMeasured) %>%
+  filter(!is.na(InitialSH) & NumLiveOysters != 0 & NumMeasured != 1) %>%
+  filter(NumLiveOysters > 50 & NumMeasured != 50)
+
+  # Check for mismatch in number live counted and number measured. 
+initialSHmeasurement_dead <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "051") %>%
+  rename("InitialSH" = "ShellHeight")
+
+SHmeasures_dead <- as.data.frame(table(ShellBudgetSH1$QuadratID, ShellBudgetSH1$LiveOrDead)) %>% # Counts up the number of SH measurements that were made
+  rename("QuadratID" = "Var1",
+         "LiveOrDead" = "Var2",
+         "NumMeasured" = "Freq") %>%
+  filter(LiveOrDead == "Dead") %>%
+  right_join(ShellBudgetQuadrat1, initialSHmeasurement_dead, by = c("QuadratID")) %>%
+  left_join(initialSHmeasurement_dead, by = c("QuadratID")) %>%
+  select(QuadratID, QuadratNumber, NumDeadOysters, NumMeasured, InitialSH, Comments.x) %>%
+  filter(NumDeadOysters != NumMeasured) %>%
+  filter(!is.na(InitialSH) & NumDeadOysters != 0 & NumMeasured != 1) %>%
+  filter(NumDeadOysters > 50 & NumMeasured != 50)
 
 ## Set error messages #
 
@@ -439,13 +481,13 @@ if (nrow(null_WQs) > 0) {
   Mess_null_WQs = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_SurveyQuads) > 0) {
+if (nrow(null_ShellBudgetQuads1) > 0| nrow(null_ShellBudgetQuads2) > 0) {
   Mess_null_SurveyQuads = ""
 } else {
   Mess_null_SurveyQuads = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_SurveySH) > 0) {
+if (nrow(null_ShellBudgetSH) > 0) {
   Mess_null_SurveySHs = ""
 } else {
   Mess_null_SurveySHs = "Congratulations! No unexpected null values detected."
@@ -463,13 +505,13 @@ if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_ra
   MessWQ_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(SurveyQuad_range) > 0) {
+if (nrow(ShellBudgetQuad_range1) > 0 | nrow(ShellBudgetQuad_range2) > 0 | nrow(ShellBudgetQuad_range3) > 0 | nrow(ShellBudgetQuad_range4) > 0) {
   MessSurveyQuad_ranges = ""
 } else {
   MessSurveyQuad_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(SurveySH_range) > 0) {
+if (nrow(SurveySH_range) > 0 | nrow(SHmeasures_live) > 0 | nrow(SHmeasures_dead) > 0) {
   MessSurveySH_ranges = ""
 } else {
   MessSurveySH_ranges = "Congratulations! No out of range values detected."
