@@ -545,9 +545,9 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(SurveyQuadrat_nulls) > 0) {kable(SurveyQuadrat_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(ShellBudgetQuadrat_nulls) > 0) {kable(ShellBudgetQuadrat_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(SurveySH_nulls) > 0) {kable(SurveySH_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(ShellBudgetSH_nulls) > 0) {kable(ShellBudgetSH_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
 <h2>Data Errors:</h2>
 
