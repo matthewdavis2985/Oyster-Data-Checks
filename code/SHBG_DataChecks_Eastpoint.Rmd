@@ -648,7 +648,7 @@ BEFORE executing it on fwcsqlint.</p2>
 
 \~\~\~\~ Note to self: The bulk of this code may be better as a Stored
 Procedure. Then the SQL Code here would be:\
-EXEC sp_CompleteSurvey \'`r EstuaryCode`\', \'`r CheckStart`\',
+EXEC sp_CompleteShellBudget \'`r EstuaryCode`\', \'`r CheckStart`\',
 \'`r CheckEnd`\', \'`r DataManager`\';
 
 \~\~\~\~ SQL code with comments in un-run chunk at end.
@@ -677,14 +677,14 @@ UPDATE SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
-UPDATE SurveyQuadrat SET DataStatus = \'Completed\', CompletedBy =
+UPDATE ShellBudgetQuadrat SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
-UPDATE SurveySH SET DataStatus = \'Completed\', CompletedBy =
+UPDATE ShellBudgetSH SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
-WHERE QuadratID IN (SELECT QuadratID FROM SurveyQuadrat WHERE 
+WHERE QuadratID IN (SELECT QuadratID FROM ShellBudgetQuadrat WHERE 
 SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips)));
 
@@ -703,15 +703,15 @@ DataStatus = \'Completed\';
 
 DELETE FROM dbo.SampleEventWQ WHERE DataStatus = \'Completed\';
 
-INSERT INTO hsdb.SurveyQuadrat SELECT \* FROM SurveyQuadrat WHERE DataStatus
+INSERT INTO hsdb.ShellBudgetQuadrat SELECT \* FROM ShellBudgetQuadrat WHERE DataStatus
 = \'Completed\';
 
-DELETE FROM dbo.SurveyQuadrat WHERE DataStatus = \'Completed\';
+DELETE FROM dbo.ShellBudgetQuadrat WHERE DataStatus = \'Completed\';
 
-INSERT INTO hsdb.SurveySH SELECT \* FROM SurveySH WHERE DataStatus
+INSERT INTO hsdb.ShellBudgetSH SELECT \* FROM ShellBudgetSH WHERE DataStatus
 = \'Completed\';
 
-DELETE FROM dbo.SurveySH WHERE DataStatus = \'Completed\';
+DELETE FROM dbo.ShellBudgetSH WHERE DataStatus = \'Completed\';
 
 `r knit_exit()`
 
@@ -748,15 +748,15 @@ UPDATE SampleEventWQ
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
--- Query the SurveyQuadrat table using the temporary table
-UPDATE SurveyQuadrat 
+-- Query the ShellBudgetQuadrat table using the temporary table
+UPDATE ShellBudgetQuadrat 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
--- Query the SurveySH table using the temporary table
-UPDATE SurveySH 
+-- Query the ShellBudgetSH table using the temporary table
+UPDATE ShellBudgetSH 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
-WHERE QuadratID IN (SELECT QuadratID FROM SurveyQuadrat WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
+WHERE QuadratID IN (SELECT QuadratID FROM ShellBudgetQuadrat WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
 
 -- Insert the Completed data into hsdb, and DELETE FROM dbo
 INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
@@ -771,12 +771,12 @@ INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'C
 
 DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
 
-INSERT INTO hsdb.SurveyQuadrat SELECT * FROM SurveyQuadrat WHERE DataStatus = 'Completed';
+INSERT INTO hsdb.ShellBudgetQuadrat SELECT * FROM ShellBudgetQuadrat WHERE DataStatus = 'Completed';
 
-DELETE FROM dbo.SurveyQuadrat WHERE DataStatus = 'Completed';
+DELETE FROM dbo.ShellBudgetQuadrat WHERE DataStatus = 'Completed';
 
-INSERT INTO hsdb.SurveySH SELECT * FROM SurveySH WHERE DataStatus = 'Completed';
+INSERT INTO hsdb.ShellBudgetSH SELECT * FROM ShellBudgetSH WHERE DataStatus = 'Completed';
 
-DELETE FROM dbo.SurveySH WHERE DataStatus = 'Completed';
+DELETE FROM dbo.ShellBudgetSH WHERE DataStatus = 'Completed';
 
 ```
