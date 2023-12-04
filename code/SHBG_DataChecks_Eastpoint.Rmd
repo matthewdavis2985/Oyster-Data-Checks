@@ -568,17 +568,19 @@ comment explaining why the data is missing.
 
 `r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment Required for all Null values")}`
 
-<h4>--- Survey Quadrats ---</h4>
+<h4>--- Shell Budget Quadrats ---</h4>
 
-<p2>`r Mess_null_SurveyQuads`</p2>
+<p2>`r Mess_null_ShellBudgetQuads`</p2>
 
-`r if (nrow(null_SurveyQuads) > 0) {kable(null_SurveyQuads, caption = "Null Survey Quadrat Data. Comment Required for all Null values")}`
+`r if (nrow(null_ShellBudgetQuads1) > 0) {kable(null_ShellBudgetQuads1, caption = "Null Shell Budget Quadrat Data. Comment Required for all Null values")}`
 
-<h4>--- Survey Shell Heights ---</h4>
+`r if (nrow(null_ShellBudgetQuads2) > 0) {kable(null_ShellBudgetQuads2, caption = "Null Shell Budget Quadrat Data. Comment Required for all Null values")}`
 
-<p2>`r Mess_null_SurveySHs`</p2>
+<h4>--- Shell Budget Shell Heights ---</h4>
 
-`r if (nrow(null_SurveySH) > 0) {kable(null_SurveySH, caption = "Null Survey Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001")}`
+<p2>`r Mess_null_ShellBudgetSHs`</p2>
+
+`r if (nrow(null_ShellBudgetSH) > 0) {kable(null_ShellBudgetSH, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001 for Live or _051 for Dead")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
@@ -589,7 +591,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessSampleEvent_ranges`</p2>
 
-`r if (nrow(SampleEvent_range) > 0) {kable(SampleEvent_range, caption = "Out of range distance from Fixed Location. Expected range is 1,852 meters (1 nautical mile). Comment required for out of range values.")}`
+`r if (nrow(SampleEvent_range) > 0) {kable(SampleEvent_range, caption = "Out of range distance from Fixed Location. Expected range is 138 meters from the assigned corner of the FixedLocation  (0.07 nautical mile). Comment required for out of range values.")}`
 
 <h4>--- Water Quality ---</h4>
 
@@ -611,19 +613,27 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
 
-<h4>--- Survey Quadrat ---</h4>
+<h4>--- Shell Budget Quadrat ---</h4>
 
-<p2>`r MessSurveyQuad_ranges`</p2>
+<p2>`r MessShellBudgetQuad_ranges`</p2>
 
-`r if (nrow(SurveyQuad_range) > 0) {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 500. Expected range for NumDead is 0 to 300. Expected range for TotalVolume is 0.05 to 5.0 L. Expected range for TotalWeight is 0.10 to 10.00 kg. Expected range for Volume is 35% to 65% of Weight. Expected range for NumDrills is 0 to 5. Comment required for out of range values.")}`
+`r if (nrow(ShellBudgetQuad_range1) > 0) {kable(ShellBudgetQuad_range1, caption = "Out of range Quadrat data. Expected range for TotalSampleWeight is 0.10 to 16.00 kg. Expected range for TotalSampleVolume is 0.05 to 8.0 L. Expected range for LiveOysterWeight is 0 to 4.00 kg. Expected range for LiveOysterVolume is 0 to 2.0 L. Expected range for NumDrills is 0 to 5. Expected range for DrillWeight is 0 to 0.10 kg. Expected range for OtherBiotaWeight is 0 to 0.20 kg. Expected range for NumLiveOysters is 0 to 1000. Expected range for NumDeadOysters is 0 to 500. Comment required for out of range values.")}`
 
-<h4>--- Survey Shell Heights ---</h4>
+`r if (nrow(ShellBudgetQuad_range2) > 0) {kable(ShellBudgetQuad_range2, caption = "Out of range Quadrat data. Expected range for OysterShellWeight is 0 to 4.00 kg. Expected range for OysterShellVolume is 0 to 2.0 L. Expected range for PlantedShellWeight is 0 to 10.00 kg. Expected range for PlantedShellVolume is 0 to 5.0 L. Expected range for ShellHashWeight is 0 to 2.00 kg. Expected range for ShellHashVolume is 0 to 1.0 L. Expected range for BlackSubstrateWeight is 0 to 1.00 kg. Expected range for BlackSubstrateVolume is 0 to 0.5 L. Comment required for out of range values.")}`
 
-<p2>`r MessSurveySH_ranges`</p2>
+`r if (nrow(ShellBudgetQuad_range3) > 0) {kable(ShellBudgetQuad_range3, caption = "Out of range Quadrat data. The sum of component weights are expected to be between 80% and 120% of TotalSampleWeight. The sum of component volumes are expected to be between 80% and 120% of TotalSampleVolume. Comment required for out of range values.")}`
 
-`r if (nrow(SurveySH_range) > 0) {kable(SurveySH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
+`r if (nrow(ShellBudgetQuad_range4) > 0) {kable(ShellBudgetQuad_range4, caption = "Out of range Quadrat data. Expected range of volume is 35% to 65% of the corresponding weight. Comment required for out of range values.")}`
 
-`r if (nrow(SHmeasures) > 0) {kable(SHmeasures, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+<h4>--- Shell Budget Shell Heights ---</h4>
+
+<p2>`r MessShellBudgetSH_ranges`</p2>
+
+`r if (nrow(ShellBudgetSH_range) > 0) {kable(ShellBudgetSH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
+
+`r if (nrow(SHmeasures_live) > 0) {kable(SHmeasures_live, caption = "Mismatched Shell Height and Quadrat data. NumLiveOysters must equal NumMeasured, unless: NumLiveOysters = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLiveOysters is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+
+`r if (nrow(SHmeasures_dead) > 0) {kable(SHmeasures_dead, caption = "Mismatched Shell Height and Quadrat data. NumDeadOysters must equal NumMeasured, unless: NumDeadOysters = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumDeadOysters is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
 
 <h2>SQL Code:</h2>
 
