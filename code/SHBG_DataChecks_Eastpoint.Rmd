@@ -445,6 +445,7 @@ SHmeasures_live <- as.data.frame(table(ShellBudgetSH1$QuadratID, ShellBudgetSH1$
          "NumMeasured" = "Freq") %>%
   filter(LiveOrDead == "Live") %>%
   right_join(ShellBudgetQuadrat1, initialSHmeasurement_live, by = c("QuadratID")) %>%
+  mutate(NumMeasured = ifelse(is.na(NumMeasured), -1, NumMeasured)) %>%
   left_join(initialSHmeasurement_live, by = c("QuadratID")) %>%
   select(QuadratID, QuadratNumber, NumLiveOysters, NumMeasured, InitialSH, Comments.x) %>%
   filter(NumLiveOysters != NumMeasured) %>%
@@ -459,8 +460,9 @@ SHmeasures_dead <- as.data.frame(table(ShellBudgetSH1$QuadratID, ShellBudgetSH1$
   rename("QuadratID" = "Var1",
          "LiveOrDead" = "Var2",
          "NumMeasured" = "Freq") %>%
-  filter(LiveOrDead == "Dead") %>%
+  filter(LiveOrDead == "Dead") %>% 
   right_join(ShellBudgetQuadrat1, initialSHmeasurement_dead, by = c("QuadratID")) %>%
+  mutate(NumMeasured = ifelse(is.na(NumMeasured), -1, NumMeasured)) %>%
   left_join(initialSHmeasurement_dead, by = c("QuadratID")) %>%
   select(QuadratID, QuadratNumber, NumDeadOysters, NumMeasured, InitialSH, Comments.x) %>%
   filter(NumDeadOysters != NumMeasured) %>%
