@@ -92,16 +92,22 @@ hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
 dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
   collect() 
 
-hsdbSurveyQuadrat <- tbl(con,in_schema("hsdb", "SurveyQuadrat")) %>%
+hsdbCI <- tbl(con,in_schema("hsdb", "ConditionIndex")) %>%
   collect() 
 
-dboSurveyQuadrat <- tbl(con,in_schema("dbo", "SurveyQuadrat")) %>%
+dboCI <- tbl(con,in_schema("dbo", "ConditionIndex")) %>%
   collect()
 
-hsdbSurveySH <- tbl(con,in_schema("hsdb", "SurveySH")) %>%
+hsdbDermo <- tbl(con,in_schema("hsdb", "Dermo")) %>%
   collect() 
 
-dboSurveySH <- tbl(con,in_schema("dbo", "SurveySH")) %>%
+dboDermo <- tbl(con,in_schema("dbo", "Dermo")) %>%
+  collect()
+
+hsdbRepro <- tbl(con,in_schema("hsdb", "Repro")) %>%
+  collect() 
+
+dboRepro <- tbl(con,in_schema("dbo", "Repro")) %>%
   collect()
 
 DBI::dbDisconnect(con)
