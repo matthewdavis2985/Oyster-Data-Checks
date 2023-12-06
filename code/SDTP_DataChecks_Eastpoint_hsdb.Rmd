@@ -370,7 +370,7 @@ if (nrow(null_SedTraps) > 0) {
   Mess_null_SedTraps = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
+if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0) {
   MessWQ_ranges = ""
 } else {
   MessWQ_ranges = "Congratulations! No out of range values detected."
