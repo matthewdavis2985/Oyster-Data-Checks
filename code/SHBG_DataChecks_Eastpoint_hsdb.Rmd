@@ -324,10 +324,10 @@ SampleDepth_range <- filter(SampleEventWQ1, SampleDepth < 0 | SampleDepth > Dept
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
 Secchi_range <- filter(SampleEventWQ1, Secchi < 0 | Secchi > Depth) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Secchi, Comments)
-TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
-TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
+# TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
+#   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
+# TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
+#   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
 
 ## ShellBudgetQuadrat # 
   # Unexpected Null values
@@ -442,7 +442,7 @@ if (nrow(SampleEvent_range) > 0) {
   MessSampleEvent_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
+if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0) {
   MessWQ_ranges = ""
 } else {
   MessWQ_ranges = "Congratulations! No out of range values detected."
