@@ -93,7 +93,7 @@ DBI::dbDisconnect(con)
 ```
 
 ```{r DataFilters}
-# Filter data frames so that only data collected from Recruitment trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+# Filter data frames so that only data collected from Shell Budget trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
 FixedLocations1 <- dboFixedLocations %>%
   filter(ShellBudget == "Y") %>%
   mutate(StationNumber = as.numeric(StationNumber),
@@ -102,7 +102,7 @@ FixedLocations1 <- dboFixedLocations %>%
   select(FixedLocationID, Estuary, SectionName, StationNumber, StationName, ParcelName, FixedLat, FixedLon) %>% 
   distinct()
           
-TripInfo1 <- dboTripInfo %>% 
+TripInfo1 <- hsdbTripInfo %>% 
   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(TripID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
   arrange(TripID)
 
@@ -110,60 +110,34 @@ TripInfo2 <- TripInfo1 %>%
   select(TripID, TripDate, Comments) %>%
   arrange(TripID)
 
-SampleEvent1 <- dboSampleEvent %>% 
+SampleEvent1 <- hsdbSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, StationName, ParcelName)
 
-SampleEventWQ1 <- dboSampleEventWQ %>% 
+SampleEventWQ1 <- hsdbSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, StationName, ParcelName, SampleEventWQID)
 
-ShellBudgetQuadrat1 <- dboShellBudgetQuadrat %>% 
+ShellBudgetQuadrat1 <- hsdbShellBudgetQuadrat %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(QuadratID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, ShellBudgetQuadrat1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, StationName, ParcelName, QuadratID)
 
-ShellBudgetSH1 <- dboShellBudgetSH %>% 
+ShellBudgetSH1 <- hsdbShellBudgetSH %>% 
   mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(QuadratID, 19, 22),
          ShellHeight = as.numeric(ShellHeight)) %>% # Datatype in database is varchar due to weird PowerApps bug in SRVY, but not SHBG. Remove as.Numeric() if this causes issues
   filter(substring(QuadratID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(QuadratID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, ShellBudgetQuadrat1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, StationName, ParcelName, ShellHeightID)
-
-hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(TripID,3,6) == "SHBG")  %>%
-  arrange(TripID)
-
-hsdbSampleEvent <- hsdbSampleEvent %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SHBG") %>%
-  arrange(TripDate)
-
-hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
-  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SHBG") %>%
-  arrange(TripDate)
-
-hsdbShellBudgetQuadrat <- hsdbShellBudgetQuadrat %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(QuadratID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
-  arrange(TripDate)
-
-hsdbShellBudgetSH <- hsdbShellBudgetSH %>% 
-  mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(QuadratID, 19, 22)) %>%
-  filter(substring(QuadratID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(QuadratID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
-  arrange(TripDate)
 
 ```
 
