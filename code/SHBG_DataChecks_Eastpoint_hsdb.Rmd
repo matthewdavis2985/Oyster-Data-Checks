@@ -324,10 +324,8 @@ SampleDepth_range <- filter(SampleEventWQ1, SampleDepth < 0 | SampleDepth > Dept
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
 Secchi_range <- filter(SampleEventWQ1, Secchi < 0 | Secchi > Depth) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Secchi, Comments)
-# TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
-#   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
-# TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
-#   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
+TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
 
 ## ShellBudgetQuadrat # 
   # Unexpected Null values
@@ -553,6 +551,8 @@ values can be outside that range and may or may not require a Comment.
 `r if (nrow(SampleDepth_range) > 0) {kable(SampleDepth_range, caption = "Out of range Sample depth data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
 
 `r if (nrow(Secchi_range) > 0) {kable(Secchi_range, caption = "Out of range Secchi data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
+
+`r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
 
 <h4>--- Shell Budget Quadrat ---</h4>
 
