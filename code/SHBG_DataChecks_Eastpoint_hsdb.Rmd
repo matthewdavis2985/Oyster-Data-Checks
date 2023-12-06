@@ -581,8 +581,7 @@ values can be outside that range and may or may not require a Comment.
 If there are no Database Errors detected and all Data Errors have been
 addressed, you may use the following SQL code to Complete these data.
 This code will update the DataStatus, CompletedBy, and DateCompleted
-fields; it will copy the data to the hsdb schema; and it will remove the
-data from the dbo schema.
+fields in the hsdb schema.
 
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
@@ -601,58 +600,33 @@ IF OBJECT_ID(\'tempdb..#ValidTrips\') IS NOT NULL BEGIN DROP TABLE
 
 CREATE TABLE #ValidTrips ( TripID VARCHAR(50) );
 
-INSERT INTO #ValidTrips (TripID) SELECT TripID FROM TripInfo WHERE
+INSERT INTO #ValidTrips (TripID) SELECT TripID FROM hsdb.TripInfo WHERE
 TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
 DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`SRVY%\';
 
-UPDATE TripInfo SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.TripInfo SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
-UPDATE SampleEvent SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.SampleEvent SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d.%B.%Y")`\'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
-UPDATE SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
-UPDATE ShellBudgetQuadrat SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.ShellBudgetQuadrat SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
-UPDATE ShellBudgetSH SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.ShellBudgetSH SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE QuadratID IN (SELECT QuadratID FROM ShellBudgetQuadrat WHERE 
 SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips)));
-
-INSERT INTO hsdb.TripInfo SELECT \* FROM TripInfo WHERE DataStatus =
-\'Completed\';
-
-DELETE FROM dbo.TripInfo WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SampleEvent SELECT \* FROM SampleEvent WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.SampleEvent WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SampleEventWQ SELECT \* FROM SampleEventWQ WHERE
-DataStatus = \'Completed\';
-
-DELETE FROM dbo.SampleEventWQ WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.ShellBudgetQuadrat SELECT \* FROM ShellBudgetQuadrat WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.ShellBudgetQuadrat WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.ShellBudgetSH SELECT \* FROM ShellBudgetSH WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.ShellBudgetSH WHERE DataStatus = \'Completed\';
 
 `r knit_exit()`
 
@@ -670,54 +644,33 @@ CREATE TABLE #ValidTrips (
 
 INSERT INTO #ValidTrips (TripID)
 SELECT TripID
-FROM TripInfo
+FROM hsdb.TripInfo
 WHERE TripDate > '`r CheckStart`' AND TripDate < '`r CheckEnd`'
 AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`SRVY%';
 
 -- Query the TripInfo table using the temporary table
-UPDATE TripInfo 
+UPDATE hsdb.TripInfo 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 -- Query the SampleEvent table using the temporary table
-UPDATE SampleEvent 
+UPDATE hsdb.SampleEvent 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d.%B.%Y")`'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 -- Query the SampleEventWQ table using the temporary table
-UPDATE SampleEventWQ 
+UPDATE hsdb.SampleEventWQ 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
 -- Query the ShellBudgetQuadrat table using the temporary table
-UPDATE ShellBudgetQuadrat 
+UPDATE hsdb.ShellBudgetQuadrat 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
 -- Query the ShellBudgetSH table using the temporary table
-UPDATE ShellBudgetSH 
+UPDATE hsdb.ShellBudgetSH 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE QuadratID IN (SELECT QuadratID FROM ShellBudgetQuadrat WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
-
--- Insert the Completed data into hsdb, and DELETE FROM dbo
-INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.ShellBudgetQuadrat SELECT * FROM ShellBudgetQuadrat WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.ShellBudgetQuadrat WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.ShellBudgetSH SELECT * FROM ShellBudgetSH WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.ShellBudgetSH WHERE DataStatus = 'Completed';
 
 ```
