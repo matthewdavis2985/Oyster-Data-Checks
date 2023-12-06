@@ -143,7 +143,7 @@ ShellBudgetSH1 <- hsdbShellBudgetSH %>%
 
 ```{r DatabaseErrors}
 ### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the dbo schema
+# Ensure the Primary Keys are unique in the hsdb schema
 ERR_Table1 <- data.frame()
 ERR_Table1a <- data.frame()
 ERR_Table1b <- data.frame()
@@ -152,56 +152,38 @@ ERR_Table1d <- data.frame()
 ERR_Table1e <- data.frame()
 
 if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
-  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
+  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
     mutate(PrimaryKey = TripID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
-  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
+  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
     mutate(PrimaryKey = SampleEventID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
-  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
+  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
     mutate(PrimaryKey = SampleEventWQID) %>% 
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(ShellBudgetQuadrat1[duplicated(ShellBudgetQuadrat1$QuadratID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "ShellBudgetQuadrat", ShellBudgetQuadrat1[duplicated(ShellBudgetQuadrat1$QuadratID), ])) %>% 
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "ShellBudgetQuadrat", ShellBudgetQuadrat1[duplicated(ShellBudgetQuadrat1$QuadratID), ])) %>% 
     mutate(PrimaryKey = QuadratID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(ShellBudgetSH1[duplicated(ShellBudgetSH1$ShellHeightID), ]) > 0) {
-  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "ShellBudgetSH", ShellBudgetSH1[duplicated(ShellBudgetSH1$ShellHeightID), ])) %>% 
+  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "ShellBudgetSH", ShellBudgetSH1[duplicated(ShellBudgetSH1$ShellHeightID), ])) %>% 
     mutate(PrimaryKey = ShellHeightID) %>%
     select(schema, Table, PrimaryKey)
 }
 
-### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the hsdb schema
-ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, ShellBudgetQuadrat1$QuadratID, ShellBudgetSH1$ShellHeightID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbShellBudgetQuadrat$QuadratID, hsdbShellBudgetSH$ShellHeightID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "ShellBudgetQuadrat", "ShellBudgetSH")
-
-# Loop through values
-for (i in seq_along(sorc)) {
-  for (j in seq_along(sorc[[i]])) {
-    check_id <- sorc[[i]][j]
-  # Check if the trip_id exists in TripInfo$TripID
-    if ((check_id %in% dest[[i]])) {
-    # Add trip_id to ERR_Table
-      ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-    }
-  }
-}
-
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
-rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
+#Combine sub tables into one table and delete sub tables
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
 
 
 ### DATABASE ERRORS ###
@@ -269,24 +251,24 @@ for (i in seq_along(pkid)) {
 
 ### DATABASE ERRORS ###
 # Ensure that any field that MUST have a value is not null
-TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(TripID, TripDate, TripType, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) ) %>%
+  select(TripID, TripDate, TripType, Comments)
 
-SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventID, TripID, FixedLocationID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) ) %>%
+  select(SampleEventID, TripID, FixedLocationID, Comments)
 
-SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) ) %>%
+  select(SampleEventWQID, SampleEventID, Comments)
 
-ShellBudgetQuadrat_nulls <- filter(ShellBudgetQuadrat1, is.na(QuadratID) | is.na(SampleEventID) | is.na(QuadratNumber) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(QuadratID, SampleEventID, QuadratNumber, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+ShellBudgetQuadrat_nulls <- filter(ShellBudgetQuadrat1, is.na(QuadratID) | is.na(SampleEventID) | is.na(QuadratNumber) ) %>%
+  select(QuadratID, SampleEventID, QuadratNumber, Comments)
 
-ShellBudgetSH_nulls <- filter(ShellBudgetSH1, is.na(QuadratID) | is.na(QuadratID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(ShellHeightID, QuadratID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+ShellBudgetSH_nulls <- filter(ShellBudgetSH1, is.na(QuadratID) | is.na(QuadratID) ) %>%
+  select(ShellHeightID, QuadratID, Comments)
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboShellBudgetQuadrat, dboShellBudgetSH, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbShellBudgetQuadrat, hsdbShellBudgetSH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dboFixedLocations, dest, FixedLocations1, hsdbShellBudgetQuadrat, hsdbShellBudgetSH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
