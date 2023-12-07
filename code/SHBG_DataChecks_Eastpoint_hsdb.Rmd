@@ -1,0 +1,676 @@
+---
+title: "Shell Budget Survey Data Checks"
+output:
+  html_document:
+---
+
+```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
+# Set your variables
+CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2023-08-28")  # End Date for Checks
+EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
+DataManager = "Matthew Davis"
+Database = "OysterLocalMD20231019"
+```
+
+```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
+# Load necessary R packages and configure chunks
+library(tidyverse)
+library(odbc)
+library(DBI)
+library(dbplyr)
+library(lubridate)
+library(rMR)
+library(scales)
+library(geosphere)
+library(knitr)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+```
+
+```{css}
+/* Sets the fonts for the RMarkdown output */
+p {
+font-size: 8pt;
+}
+
+p2 {
+font-weight: bold;
+}
+
+h1 {
+font-size: 18pt;
+font-weight: bold;
+}
+
+h2 {
+font-size: 14pt;
+font-weight: bold;
+}
+
+h3 {
+font-size: 12pt;
+font-style: italic;
+}
+
+h4 {
+font-size: 10pt;
+text-indent: 5%;
+font-weight: bold;
+}
+```
+
+```{r DatabaseDownload}
+# Connect to Local database server and pull all necessary data, then close connection 
+con <- dbConnect(odbc(),
+                    Driver = "SQL Server", 
+                    Server = "localhost\\MATTLOCALSQL",
+                    Database = Database,
+                    Authentication = "ActiveDirectoryIntegrated")
+
+dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
+  collect() %>% 
+  filter(Estuary == EstuaryCode)
+
+hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
+  collect() 
+
+hsdbSampleEvent <- tbl(con,in_schema("hsdb", "SampleEvent")) %>%
+  collect() 
+
+hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
+  collect() 
+
+hsdbShellBudgetQuadrat <- tbl(con,in_schema("hsdb", "ShellBudgetQuadrat")) %>%
+  collect() 
+
+hsdbShellBudgetSH <- tbl(con,in_schema("hsdb", "ShellBudgetSH")) %>%
+  collect() 
+
+DBI::dbDisconnect(con)
+
+```
+
+```{r DataFilters}
+# Filter data frames so that only data collected from Shell Budget trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+FixedLocations1 <- dboFixedLocations %>%
+  filter(ShellBudget == "Y") %>%
+  mutate(StationNumber = as.numeric(StationNumber),
+         FixedLat = as.numeric(substring(Comments, 21, 29)),
+         FixedLon = as.numeric(substring(Comments, 31, 40))) %>% # SHBG parcels lack a Fixed point. These lines designate the corner of the box as the Fixed point to compare it to
+  select(FixedLocationID, Estuary, SectionName, StationNumber, StationName, ParcelName, FixedLat, FixedLon) %>% 
+  distinct()
+          
+TripInfo1 <- hsdbTripInfo %>% 
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(TripID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
+  arrange(TripID)
+
+TripInfo2 <- TripInfo1 %>%
+  select(TripID, TripDate, Comments) %>%
+  arrange(TripID)
+
+SampleEvent1 <- hsdbSampleEvent %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, StationName, ParcelName)
+
+SampleEventWQ1 <- hsdbSampleEventWQ %>% 
+  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
+  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, StationName, ParcelName, SampleEventWQID)
+
+ShellBudgetQuadrat1 <- hsdbShellBudgetQuadrat %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(QuadratID, 19, 22)) %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, ShellBudgetQuadrat1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, StationName, ParcelName, QuadratID)
+
+ShellBudgetSH1 <- hsdbShellBudgetSH %>% 
+  mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(QuadratID, 19, 22),
+         ShellHeight = as.numeric(ShellHeight)) %>% # Datatype in database is varchar due to weird PowerApps bug in SRVY, but not SHBG. Remove as.Numeric() if this causes issues
+  filter(substring(QuadratID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(QuadratID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, ShellBudgetQuadrat1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, StationName, ParcelName, ShellHeightID)
+
+```
+
+```{r DatabaseErrors}
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are unique in the hsdb schema
+ERR_Table1 <- data.frame()
+ERR_Table1a <- data.frame()
+ERR_Table1b <- data.frame()
+ERR_Table1c <- data.frame()
+ERR_Table1d <- data.frame()
+ERR_Table1e <- data.frame()
+
+if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
+  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
+    mutate(PrimaryKey = TripID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
+  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
+    mutate(PrimaryKey = SampleEventID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
+  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
+    mutate(PrimaryKey = SampleEventWQID) %>% 
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(ShellBudgetQuadrat1[duplicated(ShellBudgetQuadrat1$QuadratID), ]) > 0) {
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "ShellBudgetQuadrat", ShellBudgetQuadrat1[duplicated(ShellBudgetQuadrat1$QuadratID), ])) %>% 
+    mutate(PrimaryKey = QuadratID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(ShellBudgetSH1[duplicated(ShellBudgetSH1$ShellHeightID), ]) > 0) {
+  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "ShellBudgetSH", ShellBudgetSH1[duplicated(ShellBudgetSH1$ShellHeightID), ])) %>% 
+    mutate(PrimaryKey = ShellHeightID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+#Combine sub tables into one table and delete sub tables
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
+
+
+### DATABASE ERRORS ###
+# Ensure the Foreign Keys are not orphans
+# Create an empty data frame ERR_Table
+ERR_Table2 <- data.frame()
+sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, ShellBudgetQuadrat1$SampleEventID, ShellBudgetSH1$QuadratID)
+dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, ShellBudgetQuadrat1$QuadratID)
+tabl <- list("SampleEvent", "SampleEventWQ", "ShellBudgetQuadrat", "ShellBudgetSH")
+
+# Loop through SampleEvent$TripID values
+for (i in seq_along(sorc)) {
+  for (j in seq_along(sorc[[i]])) {
+    check_id <- sorc[[i]][j]
+  # Check if the trip_id exists in TripInfo$TripID
+    if (!(check_id %in% dest[[i]])) {
+    # Add trip_id to ERR_Table
+      ERR_Table2 <- rbind(ERR_Table2, data.frame(Table = tabl[[i]], OrphanForeignKey = check_id))
+    }
+  }
+}
+ERR_Table2 <- distinct(ERR_Table2) 
+
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are not childless
+ERR_Table3 <- data.frame()
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, ShellBudgetQuadrat1$QuadratID)
+dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, ShellBudgetQuadrat1$SampleEventID, ShellBudgetSH1$QuadratID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "ShellBudgetQuadrat")
+
+# Loop through SampleEvent$TripID values
+for (i in seq_along(sorc)) {
+  for (j in seq_along(sorc[[i]])) {
+    check_id <- sorc[[i]][j]
+    if (!(check_id %in% dest[[i]])) {
+      ERR_Table3 <- rbind(ERR_Table3, data.frame(Table = tabl[[i]], ChildlessPrimaryKey = check_id))
+    }
+  }
+}
+ERR_Table3 <- distinct(ERR_Table3) 
+
+# Ensure there are 15 quadrats per SampleEvent
+ERR_Table3a <- as.data.frame(table(ShellBudgetQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
+  rename("SampleEventID" = "Var1",
+         "NumOfQuads" = "Freq") %>%
+  filter(NumOfQuads != 15)
+
+### DATABASE ERRORS ###
+# Ensure that Primary Keys and Foreign Keys have been formed correctly
+ERR_Table4 <- data.frame()
+pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, ShellBudgetQuadrat1$QuadratID, ShellBudgetSH1$ShellHeightID)
+fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, ShellBudgetQuadrat1$SampleEventID, ShellBudgetSH1$QuadratID)
+tabl <- list("SampleEvent", "SampleEventWQ", "ShellBudgetQuadrat", "ShellBudgetSH")
+numb <- list(17, 24, 24, 27)
+
+for (i in seq_along(pkid)) {
+  for (j in seq_along(fkid[[i]])) {
+    check_fkid <- fkid[[i]][j]
+    check_pkid <- substring(pkid[[i]][j],1,numb[[i]])
+    if (check_fkid != check_pkid) {
+      ERR_Table4 <- rbind(ERR_Table4, data.frame(Table = tabl[[i]], PrimaryKey = pkid[[i]][j], ForeignKey = check_fkid))
+    }
+  }
+}
+
+### DATABASE ERRORS ###
+# Ensure that any field that MUST have a value is not null
+TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) ) %>%
+  select(TripID, TripDate, TripType, Comments)
+
+SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) ) %>%
+  select(SampleEventID, TripID, FixedLocationID, Comments)
+
+SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) ) %>%
+  select(SampleEventWQID, SampleEventID, Comments)
+
+ShellBudgetQuadrat_nulls <- filter(ShellBudgetQuadrat1, is.na(QuadratID) | is.na(SampleEventID) | is.na(QuadratNumber) ) %>%
+  select(QuadratID, SampleEventID, QuadratNumber, Comments)
+
+ShellBudgetSH_nulls <- filter(ShellBudgetSH1, is.na(QuadratID) | is.na(QuadratID) ) %>%
+  select(ShellHeightID, QuadratID, Comments)
+
+# Remove unneeded data frames and values
+
+rm(dboFixedLocations, dest, FixedLocations1, hsdbShellBudgetQuadrat, hsdbShellBudgetSH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+
+# Set Error Messages for Database Errors
+
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table3a) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(ShellBudgetQuadrat_nulls) > 0 | nrow(ShellBudgetSH_nulls) > 0) {
+  MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
+  MessERR_Tables2 = ""
+} else {
+  MessERR_Tables1 = ""
+  MessERR_Tables2 = "Congratulations! No Database errors found. Primary Keys are unique and not childless. Foreign Keys are not orphans and are properly formed. All critical fields contain data. You may proceed."
+}
+```
+
+```{r Data Errors}
+### DATA ERRORS ###
+#Value ranges below represent historically high or low values. Actual values can be outside that range and may or may not require a Comment, unless noted otherwise. 
+
+## TripInfo #
+  # There are no fields that require a Comment if they are NULL.
+  # There are no out of range values for this table
+
+## SampleEvent #
+  # Unexpected Null values
+null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec) | is.na(LatDec) | is.na(LatMin) | is.na(LongDec) | is.na(LongMin)) %>%
+  select(SampleEventID, LatitudeDec, LongitudeDec, LatDec, LatMin, LongDec, LongMin)
+
+  # Out of range values
+SampleEvent_range <- SampleEvent1 %>%
+  rowwise() %>%
+  mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>%
+  filter(DistFromFixed > 138) %>% # Flags SampleEvents that occur over 138 meters from the assigned corner of the FixedLocation. This is much closer than Survey, because the 2 acre plots are much smaller
+  select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed)
+  
+## Water Quality #
+  # Unexpected Null values
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
+
+  # Out of range values
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
+Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 35) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
+DO_range <- SampleEventWQ1 %>% 
+  mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
+  filter(DO.Sat < 0.50 | DO.Sat > 1.20) %>%
+  mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, DO.Sat, Comments)
+pH_range <- filter(SampleEventWQ1, pH < 7.0 | pH > 8.5) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, pH, Comments)
+Depth_range <- filter(SampleEventWQ1, Depth < 0 | Depth > 3.5) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
+SampleDepth_range <- filter(SampleEventWQ1, SampleDepth < 0 | SampleDepth > Depth) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
+Secchi_range <- filter(SampleEventWQ1, Secchi < 0 | Secchi > Depth) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Secchi, Comments)
+TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
+
+## ShellBudgetQuadrat # 
+  # Unexpected Null values
+
+# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
+ShellBudgetQuadrat1$Comments <- ifelse(nchar(ShellBudgetQuadrat1$Comments) == 0, NA, ShellBudgetQuadrat1$Comments) 
+
+null_ShellBudgetQuads1 <- filter(ShellBudgetQuadrat1, is.na(TotalSampleWeight) | is.na(TotalSampleVolume) | is.na(LiveOysterWeight) | is.na(LiveOysterVolume) | is.na(NumDrills) | is.na(NumLiveOysters) | is.na(NumDeadOysters) & !is.na(Comments)) %>%
+  select(QuadratID, TotalSampleWeight, TotalSampleVolume, LiveOysterWeight, LiveOysterVolume, NumDrills, NumLiveOysters, NumDeadOysters, Comments)
+
+null_ShellBudgetQuads2 <- filter(ShellBudgetQuadrat1, is.na(OysterShellWeight) | is.na(OysterShellVolume) | is.na(PlantedShellWeight) | is.na(PlantedShellVolume) | is.na(ShellHashWeight) | is.na(ShellHashVolume) | is.na(BlackAndOtherSubstrateWeight) | is.na(BlackAndOtherSubstrateVolume) & !is.na(Comments)) %>%
+  select(QuadratID, OysterShellWeight, OysterShellVolume, PlantedShellWeight, PlantedShellVolume, ShellHashWeight, ShellHashVolume, BlackAndOtherSubstrateWeight, BlackAndOtherSubstrateVolume, Comments) # Too many columns to display in one table, so had to split into two
+
+  # Out of range values
+ShellBudgetQuad_range1 <- filter(ShellBudgetQuadrat1, TotalSampleWeight < 0.1 | TotalSampleWeight > 16.00 | TotalSampleVolume < 0.05 | TotalSampleVolume > 8.0 | LiveOysterWeight < 0 | LiveOysterWeight > 4.00 | LiveOysterVolume < 0 | LiveOysterVolume > 2.0 | NumDrills < 0 | NumDrills > 5 | DrillWeight < 0 | DrillWeight > 0.1 | OtherBiotaWeight < 0 | OtherBiotaWeight > 0.2 | NumLiveOysters < 0 | NumLiveOysters > 1000 | NumDeadOysters < 0 | NumDeadOysters > 500) %>%
+  select(QuadratID, TotalSampleWeight, TotalSampleVolume, LiveOysterWeight, LiveOysterVolume, NumDrills, DrillWeight, OtherBiotaWeight, NumLiveOysters, NumDeadOysters, Comments) #Absolute ranges for top part of data sheet
+
+ShellBudgetQuad_range2 <- filter(ShellBudgetQuadrat1, OysterShellWeight < 0 | OysterShellWeight > 4.0 | OysterShellVolume < 0 | OysterShellVolume > 2.0 | PlantedShellWeight < 0 | PlantedShellWeight > 10.00 | PlantedShellVolume < 0 | PlantedShellVolume > 5.0 | ShellHashWeight < 0 | ShellHashWeight > 2.0 | ShellHashVolume < 0 | ShellHashVolume > 1.0 | BlackAndOtherSubstrateWeight < 0 | BlackAndOtherSubstrateWeight > 1.0 | BlackAndOtherSubstrateVolume < 0 | BlackAndOtherSubstrateVolume > 0.5) %>%
+  select(QuadratID, OysterShellWeight, OysterShellVolume, PlantedShellWeight, PlantedShellVolume, ShellHashWeight, ShellHashVolume, BlackAndOtherSubstrateWeight, BlackAndOtherSubstrateVolume, Comments) #Absolute ranges for for Cultch Weight and Volume
+
+ShellBudgetQuad_range3 <- ShellBudgetQuadrat1 %>%
+  mutate(Calc.Tot.Wt = LiveOysterWeight + DrillWeight + OtherBiotaWeight + OysterShellWeight + PlantedShellWeight + ShellHashWeight + BlackAndOtherSubstrateWeight,
+         Calc.Tot.Vol = LiveOysterVolume + OysterShellVolume + PlantedShellVolume + ShellHashVolume + BlackAndOtherSubstrateVolume) %>%
+  filter(TotalSampleWeight < Calc.Tot.Wt*0.9 | TotalSampleWeight > Calc.Tot.Wt*1.1 | TotalSampleVolume < Calc.Tot.Vol*0.8 | TotalSampleVolume > Calc.Tot.Vol*1.2) %>%
+  select(QuadratID, TotalSampleWeight, Calc.Tot.Wt, TotalSampleVolume, Calc.Tot.Vol, Comments) #Relative ranges as a part of the whole
+
+ShellBudgetQuad_range4 <- filter(ShellBudgetQuadrat1, 
+                    TotalSampleVolume < TotalSampleWeight*0.35 | TotalSampleVolume > TotalSampleWeight*0.65 | 
+                    LiveOysterVolume < LiveOysterWeight*0.35 | LiveOysterVolume > LiveOysterWeight*0.65 | 
+                    OysterShellVolume < OysterShellWeight*0.35 | OysterShellVolume > OysterShellWeight*0.65 |
+                    PlantedShellVolume < PlantedShellWeight*0.35 | PlantedShellVolume > PlantedShellWeight*0.65 |
+                    ShellHashVolume < ShellHashWeight*0.35 | ShellHashVolume > ShellHashWeight*0.65 |
+                    BlackAndOtherSubstrateVolume < BlackAndOtherSubstrateWeight*0.35 | BlackAndOtherSubstrateVolume > BlackAndOtherSubstrateWeight*0.65) %>%
+  select(QuadratID, TotalSampleWeight, TotalSampleVolume, LiveOysterWeight, LiveOysterVolume, OysterShellWeight, OysterShellVolume, PlantedShellWeight, PlantedShellVolume, ShellHashWeight, ShellHashVolume, BlackAndOtherSubstrateWeight, BlackAndOtherSubstrateVolume, Comments) #Relative ranges on an individual basis
+
+## ShellBudgetSH #
+  # Unexpected Null values
+
+# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
+ShellBudgetSH1$Comments <- ifelse(nchar(ShellBudgetSH1$Comments) == 0, NA, ShellBudgetSH1$Comments) 
+
+null_ShellBudgetSH <- filter(ShellBudgetSH1, is.na(ShellHeight) & substring(ShellHeightID, 29, 32) != "001") %>%
+  select(ShellHeightID, LiveOrDead, ShellHeight, Comments)
+
+  # Out of range values
+ShellBudgetSH_range <- filter(ShellBudgetSH1, ShellHeight < 1 | ShellHeight > 150) %>%
+  select(ShellHeightID, LiveOrDead, ShellHeight, Comments) 
+
+  # Check for mismatch in number live counted and number measured. 
+initialSHmeasurement_live <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "001") %>%
+  rename("InitialSH" = "ShellHeight")
+
+SHmeasures_live <- as.data.frame(table(ShellBudgetSH1$QuadratID, ShellBudgetSH1$LiveOrDead)) %>% # Counts up the number of SH measurements that were made
+  rename("QuadratID" = "Var1",
+         "LiveOrDead" = "Var2",
+         "NumMeasured" = "Freq") %>%
+  filter(LiveOrDead == "Live") %>%
+  right_join(ShellBudgetQuadrat1, initialSHmeasurement_live, by = c("QuadratID")) %>%
+  mutate(NumMeasured = ifelse(is.na(NumMeasured), -1, NumMeasured)) %>%
+  left_join(initialSHmeasurement_live, by = c("QuadratID")) %>%
+  select(QuadratID, QuadratNumber, NumLiveOysters, NumMeasured, InitialSH, Comments.x) %>%
+  filter(NumLiveOysters != NumMeasured) %>%
+  filter(!is.na(InitialSH) & NumLiveOysters != 0 & NumMeasured != 1) %>%
+  filter(NumLiveOysters > 50 & NumMeasured != 50)
+
+  # Check for mismatch in number live counted and number measured. 
+initialSHmeasurement_dead <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "051") %>%
+  rename("InitialSH" = "ShellHeight")
+
+SHmeasures_dead <- as.data.frame(table(ShellBudgetSH1$QuadratID, ShellBudgetSH1$LiveOrDead)) %>% # Counts up the number of SH measurements that were made
+  rename("QuadratID" = "Var1",
+         "LiveOrDead" = "Var2",
+         "NumMeasured" = "Freq") %>%
+  filter(LiveOrDead == "Dead") %>% 
+  right_join(ShellBudgetQuadrat1, initialSHmeasurement_dead, by = c("QuadratID")) %>%
+  mutate(NumMeasured = ifelse(is.na(NumMeasured), -1, NumMeasured)) %>%
+  left_join(initialSHmeasurement_dead, by = c("QuadratID")) %>%
+  select(QuadratID, QuadratNumber, NumDeadOysters, NumMeasured, InitialSH, Comments.x) %>%
+  filter(NumDeadOysters != NumMeasured) %>%
+  filter(!is.na(InitialSH) & NumDeadOysters != 0 & NumMeasured != 1) %>%
+  filter(NumDeadOysters > 50 & NumMeasured != 50)
+
+## Set error messages #
+
+if (nrow(null_SampleEvents) > 0) {
+  Mess_null_SampleEvents = ""
+} else {
+  Mess_null_SampleEvents = "Congratulations! No unexpected null values detected."
+}
+  
+if (nrow(null_WQs) > 0) {
+  Mess_null_WQs = ""
+} else {
+  Mess_null_WQs = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(null_ShellBudgetQuads1) > 0| nrow(null_ShellBudgetQuads2) > 0) {
+  Mess_null_ShellBudgetQuads = ""
+} else {
+  Mess_null_ShellBudgetQuads = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(null_ShellBudgetSH) > 0) {
+  Mess_null_ShellBudgetSHs = ""
+} else {
+  Mess_null_ShellBudgetSHs = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(SampleEvent_range) > 0) {
+  MessSampleEvent_ranges = ""
+} else {
+  MessSampleEvent_ranges = "Congratulations! No out of range values detected."
+}
+
+if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0) {
+  MessWQ_ranges = ""
+} else {
+  MessWQ_ranges = "Congratulations! No out of range values detected."
+}
+
+if (nrow(ShellBudgetQuad_range1) > 0 | nrow(ShellBudgetQuad_range2) > 0 | nrow(ShellBudgetQuad_range3) > 0 | nrow(ShellBudgetQuad_range4) > 0) {
+  MessShellBudgetQuad_ranges = ""
+} else {
+  MessShellBudgetQuad_ranges = "Congratulations! No out of range values detected."
+}
+
+if (nrow(ShellBudgetSH_range) > 0 | nrow(SHmeasures_live) > 0 | nrow(SHmeasures_dead) > 0) {
+  MessShellBudgetSH_ranges = ""
+} else {
+  MessShellBudgetSH_ranges = "Congratulations! No out of range values detected."
+}
+```
+
+These data checks were run on trips occurring between
+<p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
+by <p2>`r DataManager`</p2> on
+<p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
+
+`r kable(TripInfo2, caption = "Data from these trips is included in these checks")`
+
+<h2>Database Errors:</h2>
+
+<h1>`r MessERR_Tables1`</h1> <p2>`r MessERR_Tables2`</p2>
+
+`r if (nrow(ERR_Table1) > 0) {kable(ERR_Table1, caption = "Duplicate Primary Keys. Primary Keys MUST be unique!")}`
+
+`r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
+
+`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present.")}`
+
+`r if (nrow(ERR_Table3a) > 0) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 15 child records unless a valid comment is present.")}`
+
+`r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
+
+`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SampleEvent_nulls) > 0) {kable(SampleEvent_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(ShellBudgetQuadrat_nulls) > 0) {kable(ShellBudgetQuadrat_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(ShellBudgetSH_nulls) > 0) {kable(ShellBudgetSH_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+<h2>Data Errors:</h2>
+
+<h3>~ ~ ~ ~ ~ ~ ~ Unexpected null values ~ ~ ~ ~ ~ ~ ~</h3>
+
+The following fields are expected to either contain data or have a
+comment explaining why the data is missing.
+
+<h4>--- Sample Event ---</h4>
+
+<p2>`r Mess_null_SampleEvents`</p2>
+
+`r if (nrow(null_SampleEvents) > 0) {kable(null_SampleEvents, caption = "Null Sample Event Data. Comment Required for all Null values")}`
+
+<h4>--- Water Quality ---</h4>
+
+<p2>`r Mess_null_WQs`</p2>
+
+`r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment Required for all Null values")}`
+
+<h4>--- Shell Budget Quadrats ---</h4>
+
+<p2>`r Mess_null_ShellBudgetQuads`</p2>
+
+`r if (nrow(null_ShellBudgetQuads1) > 0) {kable(null_ShellBudgetQuads1, caption = "Null Shell Budget Quadrat Data. Comment Required for all Null values")}`
+
+`r if (nrow(null_ShellBudgetQuads2) > 0) {kable(null_ShellBudgetQuads2, caption = "Null Shell Budget Quadrat Data. Comment Required for all Null values")}`
+
+<h4>--- Shell Budget Shell Heights ---</h4>
+
+<p2>`r Mess_null_ShellBudgetSHs`</p2>
+
+`r if (nrow(null_ShellBudgetSH) > 0) {kable(null_ShellBudgetSH, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001 for Live or _051 for Dead")}`
+
+<h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
+
+Value ranges below represent historically high or low values. Actual
+values can be outside that range and may or may not require a Comment.
+
+<h4>--- Sample Event ---</h4>
+
+<p2>`r MessSampleEvent_ranges`</p2>
+
+`r if (nrow(SampleEvent_range) > 0) {kable(SampleEvent_range, caption = "Out of range distance from Fixed Location. Expected range is 138 meters from the assigned corner of the FixedLocation  (0.07 nautical mile). Comment required for out of range values.")}`
+
+<h4>--- Water Quality ---</h4>
+
+<p2>`r MessWQ_ranges`</p2>
+
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
+
+`r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
+
+`r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range dissolved oxygen data. Expected range is 50% to 120% saturation. . Comment required for out of range values.")}`
+
+`r if (nrow(pH_range) > 0) {kable(pH_range, caption = "Out of range pH data. Expected range is 7.0 to 8.5. Comment required for out of range values.")}`
+
+`r if (nrow(Depth_range) > 0) {kable(Depth_range, caption = "Out of range depth data. Expected range is 0.0 to 3.5 m. Cannot be less than 0. Comment required for out of range values.")}`
+
+`r if (nrow(SampleDepth_range) > 0) {kable(SampleDepth_range, caption = "Out of range Sample depth data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
+
+`r if (nrow(Secchi_range) > 0) {kable(Secchi_range, caption = "Out of range Secchi data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
+
+`r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
+
+<h4>--- Shell Budget Quadrat ---</h4>
+
+<p2>`r MessShellBudgetQuad_ranges`</p2>
+
+`r if (nrow(ShellBudgetQuad_range1) > 0) {kable(ShellBudgetQuad_range1, caption = "Out of range Quadrat data. Expected range for TotalSampleWeight is 0.10 to 16.00 kg. Expected range for TotalSampleVolume is 0.05 to 8.0 L. Expected range for LiveOysterWeight is 0 to 4.00 kg. Expected range for LiveOysterVolume is 0 to 2.0 L. Expected range for NumDrills is 0 to 5. Expected range for DrillWeight is 0 to 0.10 kg. Expected range for OtherBiotaWeight is 0 to 0.20 kg. Expected range for NumLiveOysters is 0 to 1000. Expected range for NumDeadOysters is 0 to 500. Comment required for out of range values.")}`
+
+`r if (nrow(ShellBudgetQuad_range2) > 0) {kable(ShellBudgetQuad_range2, caption = "Out of range Quadrat data. Expected range for OysterShellWeight is 0 to 4.00 kg. Expected range for OysterShellVolume is 0 to 2.0 L. Expected range for PlantedShellWeight is 0 to 10.00 kg. Expected range for PlantedShellVolume is 0 to 5.0 L. Expected range for ShellHashWeight is 0 to 2.00 kg. Expected range for ShellHashVolume is 0 to 1.0 L. Expected range for BlackSubstrateWeight is 0 to 1.00 kg. Expected range for BlackSubstrateVolume is 0 to 0.5 L. Comment required for out of range values.")}`
+
+`r if (nrow(ShellBudgetQuad_range3) > 0) {kable(ShellBudgetQuad_range3, caption = "Out of range Quadrat data. The sum of component weights are expected to be between 80% and 120% of TotalSampleWeight. The sum of component volumes are expected to be between 80% and 120% of TotalSampleVolume. Comment required for out of range values.")}`
+
+`r if (nrow(ShellBudgetQuad_range4) > 0) {kable(ShellBudgetQuad_range4, caption = "Out of range Quadrat data. Expected range of volume is 35% to 65% of the corresponding weight. Comment required for out of range values.")}`
+
+<h4>--- Shell Budget Shell Heights ---</h4>
+
+<p2>`r MessShellBudgetSH_ranges`</p2>
+
+`r if (nrow(ShellBudgetSH_range) > 0) {kable(ShellBudgetSH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
+
+`r if (nrow(SHmeasures_live) > 0) {kable(SHmeasures_live, caption = "Mismatched Shell Height and Quadrat data. NumLiveOysters must equal NumMeasured, unless: NumLiveOysters = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLiveOysters is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+
+`r if (nrow(SHmeasures_dead) > 0) {kable(SHmeasures_dead, caption = "Mismatched Shell Height and Quadrat data. NumDeadOysters must equal NumMeasured, unless: NumDeadOysters = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumDeadOysters is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+
+<h2>SQL Code:</h2>
+
+If there are no Database Errors detected and all Data Errors have been
+addressed, you may use the following SQL code to Complete these data.
+This code will update the DataStatus, CompletedBy, and DateCompleted
+fields in the hsdb schema.
+
+<p2>It is recommended that you test this query in your local instance
+BEFORE executing it on fwcsqlint.</p2>
+
+\~\~\~\~ Note to self: The bulk of this code may be better as a Stored
+Procedure. Then the SQL Code here would be:\
+EXEC sp_CompleteShellBudget \'`r EstuaryCode`\', \'`r CheckStart`\',
+\'`r CheckEnd`\', \'`r DataManager`\';
+
+\~\~\~\~ SQL code with comments in un-run chunk at end.
+
+\~\~\~\~ End note
+
+IF OBJECT_ID(\'tempdb..#ValidTrips\') IS NOT NULL BEGIN DROP TABLE
+#ValidTrips; END
+
+CREATE TABLE #ValidTrips ( TripID VARCHAR(50) );
+
+INSERT INTO #ValidTrips (TripID) SELECT TripID FROM hsdb.TripInfo WHERE
+TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
+DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`SRVY%\';
+
+UPDATE hsdb.TripInfo SET DataStatus = \'Completed\', CompletedBy =
+\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
+WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+UPDATE hsdb.SampleEvent SET DataStatus = \'Completed\', CompletedBy =
+\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d.%B.%Y")`\'
+WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+UPDATE hsdb.SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
+\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
+WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
+TripID IN (SELECT TripID FROM #ValidTrips));
+
+UPDATE hsdb.ShellBudgetQuadrat SET DataStatus = \'Completed\', CompletedBy =
+\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
+WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
+TripID IN (SELECT TripID FROM #ValidTrips));
+
+UPDATE hsdb.ShellBudgetSH SET DataStatus = \'Completed\', CompletedBy =
+\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
+WHERE QuadratID IN (SELECT QuadratID FROM ShellBudgetQuadrat WHERE 
+SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
+TripID IN (SELECT TripID FROM #ValidTrips)));
+
+`r knit_exit()`
+
+```{sql SQL code, eval=FALSE, include=FALSE}
+
+-- Check that there is not already a temporary table to store valid TripIDs. If there is, DELETE it and create a clean temporary table
+IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
+BEGIN
+    DROP TABLE #ValidTrips;
+END
+
+CREATE TABLE #ValidTrips (
+    TripID VARCHAR(50)
+);
+
+INSERT INTO #ValidTrips (TripID)
+SELECT TripID
+FROM hsdb.TripInfo
+WHERE TripDate > '`r CheckStart`' AND TripDate < '`r CheckEnd`'
+AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`SRVY%';
+
+-- Query the TripInfo table using the temporary table
+UPDATE hsdb.TripInfo 
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
+WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+-- Query the SampleEvent table using the temporary table
+UPDATE hsdb.SampleEvent 
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d.%B.%Y")`'
+WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+-- Query the SampleEventWQ table using the temporary table
+UPDATE hsdb.SampleEventWQ 
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
+WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
+-- Query the ShellBudgetQuadrat table using the temporary table
+UPDATE hsdb.ShellBudgetQuadrat 
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
+WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
+-- Query the ShellBudgetSH table using the temporary table
+UPDATE hsdb.ShellBudgetSH 
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
+WHERE QuadratID IN (SELECT QuadratID FROM ShellBudgetQuadrat WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
+
+```
