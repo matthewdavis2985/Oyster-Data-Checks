@@ -93,7 +93,7 @@ DBI::dbDisconnect(con)
 ```
 
 ```{r DataFilters}
-# Filter data frames so that only data collected from Recruitment trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+# Filter data frames so that only data collected from Survey trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
 FixedLocations1 <- dboFixedLocations %>% 
   mutate(StationNumber = as.numeric(StationNumber),
          FixedLat = LatitudeDec,
@@ -177,31 +177,31 @@ ERR_Table1d <- data.frame()
 ERR_Table1e <- data.frame()
 
 if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
-  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
+  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
     mutate(PrimaryKey = TripID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
-  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
+  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
     mutate(PrimaryKey = SampleEventID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
-  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
+  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
     mutate(PrimaryKey = SampleEventWQID) %>% 
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SurveyQuadrat1[duplicated(SurveyQuadrat1$QuadratID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SurveyQuadrat", SurveyQuadrat1[duplicated(SurveyQuadrat1$QuadratID), ])) %>% 
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SurveyQuadrat", SurveyQuadrat1[duplicated(SurveyQuadrat1$QuadratID), ])) %>% 
     mutate(PrimaryKey = QuadratID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SurveySH1[duplicated(SurveySH1$ShellHeightID), ]) > 0) {
-  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SurveySH", SurveySH1[duplicated(SurveySH1$ShellHeightID), ])) %>% 
+  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SurveySH", SurveySH1[duplicated(SurveySH1$ShellHeightID), ])) %>% 
     mutate(PrimaryKey = ShellHeightID) %>%
     select(schema, Table, PrimaryKey)
 }
@@ -294,20 +294,20 @@ for (i in seq_along(pkid)) {
 
 ### DATABASE ERRORS ###
 # Ensure that any field that MUST have a value is not null
-TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(TripID, TripDate, TripType, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) ) %>%
+  select(TripID, TripDate, TripType, Comments)
 
-SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventID, TripID, FixedLocationID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) ) %>%
+  select(SampleEventID, TripID, FixedLocationID, Comments)
 
-SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) ) %>%
+  select(SampleEventWQID, SampleEventID, Comments)
 
-SurveyQuadrat_nulls <- filter(SurveyQuadrat1, is.na(QuadratID) | is.na(SampleEventID) | is.na(QuadratNumber) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(QuadratID, SampleEventID, QuadratNumber, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SurveyQuadrat_nulls <- filter(SurveyQuadrat1, is.na(QuadratID) | is.na(SampleEventID) | is.na(QuadratNumber) ) %>%
+  select(QuadratID, SampleEventID, QuadratNumber, Comments)
 
-SurveySH_nulls <- filter(SurveySH1, is.na(QuadratID) | is.na(QuadratID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(ShellHeightID, QuadratID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SurveySH_nulls <- filter(SurveySH1, is.na(QuadratID) | is.na(QuadratID) ) %>%
+  select(ShellHeightID, QuadratID, Comments)
 
 # Remove unneeded data frames and values
 
@@ -369,8 +369,6 @@ Secchi_range <- filter(SampleEventWQ1, Secchi < 0 | Secchi > Depth) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Secchi, Comments)
 TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
-TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
 
 ## SurveyQuadrat #
   # Unexpected Null values
@@ -441,7 +439,7 @@ if (nrow(SampleEvent_range) > 0) {
   MessSampleEvent_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
+if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0) {
   MessWQ_ranges = ""
 } else {
   MessWQ_ranges = "Congratulations! No out of range values detected."
