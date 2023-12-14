@@ -154,7 +154,9 @@ CI1 <- dboCI %>%
 
 Dermo1 <- dboDermo %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22)) %>% 
+         FixedLocationID = substring(SampleEventID, 19, 22),
+         DermoMantle = as.numeric(DermoMantle),
+         DermoGill = as.numeric(DermoGill)) %>% 
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, Dermo1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
@@ -426,42 +428,41 @@ TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 
 TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
 
-## SurveyQuadrat #
+## ConditionIndex #
   # Unexpected Null values
-
-# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
-SurveyQuadrat1$Comments <- ifelse(nchar(SurveyQuadrat1$Comments) == 0, NA, SurveyQuadrat1$Comments) 
-null_SurveyQuads <- filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.na(TotalVolume) | is.na(TotalWeight) | is.na(NumDrills) & !is.na(Comments)) %>%
-  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
+null_CI <- filter(CI1, is.na(ShellHeight), is.na(ShellLength), is.na(ShellWidth), is.na(TotalWeight), is.na(TarePanWeight), is.na(TissueWetWeight), is.na(ShellWetWeight), is.na(TissueDryWeight), is.na(ShellDryWeight)) %>%
+  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
 
   # Out of range values
-SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | TotalVolume < 0.05 | TotalVolume > 5.0 | TotalWeight < 0.1 | TotalWeight > 10.00 | TotalVolume < TotalWeight*0.35 | TotalVolume > TotalWeight*0.65 | NumDrills < 0 | NumDrills > 5) %>%
-  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments) 
+CI_range1 <- CI1 %>%
+  mutate(Predicted.Weight = 0.0005 * (ShellHeight ^ 2.6434), #This calculation needs revisiting
+         Pred.Vs.Actual = (Predicted.Weight - TotalWeight) / TotalWeight) %>%
+  filter(ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | Pred.Vs.Actual < -0.65 | Pred.Vs.Actual > 1.65) %>%
+  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, Predicted.Weight, Pred.Vs.Actual, Comments) 
+CI_range2 <- filter(CI1, TarePanWeight < 0.9 | TarePanWeight > 5 | TissueWetWeight < ((TotalWeight + TarePanWeight) * 0.05) | TissueWetWeight > ((TotalWeight + TarePanWeight) * 0.4) | ShellWetWeight < (TotalWeight * 0.5) | ShellWetWeight > (TotalWeight * 0.99) | TissueDryWeight < TarePanWeight | TissueDryWeight > (TissueWetWeight * 0.9) | ShellDryWeight < (ShellWetWeight * 0.8) | ShellDryWeight > ShellWetWeight) %>%
+  select(OysterID, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
 
-## SurveySH #
+## Dermo #
   # Unexpected Null values
-
-# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
-SurveySH1$Comments <- ifelse(nchar(SurveySH1$Comments) == 0, NA, SurveySH1$Comments) 
-null_SurveySH <- filter(SurveySH1, is.na(ShellHeight) & substring(ShellHeightID, 29, 32) != "001") %>%
-  select(ShellHeightID, ShellHeight, Comments)
+null_Dermo <- filter(Dermo1, is.na(ShellHeight), is.na(ShellLength), is.na(ShellWidth), is.na(TotalWeight), is.na(ShellWetWeight), is.na(DermoMantle), is.na(DermoGill)) %>%
+  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, Comments)
 
   # Out of range values
-SurveySH_range <- filter(SurveySH1, ShellHeight < 1 | ShellHeight > 150) %>%
-  select(ShellHeightID, ShellHeight, Comments) 
+Dermo_range <- Dermo1 %>%
+  mutate(Predicted.Weight = 0.0005 * (ShellHeight ^ 2.6434), #This calculation needs revisiting
+         Pred.Vs.Actual = (Predicted.Weight - TotalWeight) / TotalWeight) %>%
+  filter(ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | Pred.Vs.Actual < -0.65 | Pred.Vs.Actual > 1.65 | DermoMantle < 0 | DermoMantle > 5 | DermoGill < 0 | DermoGill > 5) %>%
+  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, Predicted.Weight, Pred.Vs.Actual, DermoMantle, DermoGill, Comments)
 
-  # Check for mismatch in number live and number measured. 
-initialSHmeasurement <- filter(SurveySH1, substring(ShellHeightID, 29, 31) == "001") %>%
-  rename("InitialSH" = "ShellHeight")
-SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
-  rename("QuadratID" = "Var1",
-         "NumMeasured" = "Freq") %>%
-  left_join(SurveyQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
-  left_join(initialSHmeasurement, by = c("QuadratID")) %>%
-  select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) %>%
-  filter(NumLive != NumMeasured) %>%
-  filter(!is.na(InitialSH) & NumLive != 0 & NumMeasured != 1) %>%
-  filter(NumLive > 50 & NumMeasured == 50)
+## Repro #
+  # Unexpected Null values
+null_Repro <- filter(Repro1, is.na(Sex), is.na(Parasite), is.na(BadSlide)) %>%
+  select(OysterID, Sex, ReproStage, Parasite, BadSlide, Comments)
+
+  # Out of range values
+Repro_range <- Repro1 %>%
+  filter((Sex == "M/F" & !is.na(ReproStage)) | (Parasite == "Buceph" & !is.na(ReproStage)) | (ReproStage == 4 & Sex != "Z")) %>%
+  select(OysterID, Sex, ReproStage, Parasite, BadSlide, Comments)
 
 ## Set error messages #
 
@@ -477,16 +478,22 @@ if (nrow(null_WQs) > 0) {
   Mess_null_WQs = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_SurveyQuads) > 0) {
-  Mess_null_SurveyQuads = ""
+if (nrow(null_CI) > 0) {
+  Mess_null_CI = ""
 } else {
-  Mess_null_SurveyQuads = "Congratulations! No unexpected null values detected."
+  Mess_null_CI = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_SurveySH) > 0) {
-  Mess_null_SurveySHs = ""
+if (nrow(null_Dermo) > 0) {
+  Mess_null_Dermo = ""
 } else {
-  Mess_null_SurveySHs = "Congratulations! No unexpected null values detected."
+  Mess_null_Dermo = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(null_Repro) > 0) {
+  Mess_null_Repro = ""
+} else {
+  Mess_null_Repro = "Congratulations! No unexpected null values detected."
 }
 
 if (nrow(SampleEvent_range) > 0) {
@@ -501,16 +508,22 @@ if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_ra
   MessWQ_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(SurveyQuad_range) > 0) {
-  MessSurveyQuad_ranges = ""
+if (nrow(CI_range1) > 0 | nrow(CI_range2) > 0) {
+  MessCI_ranges = ""
 } else {
-  MessSurveyQuad_ranges = "Congratulations! No out of range values detected."
+  MessCI_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(SurveySH_range) > 0) {
-  MessSurveySH_ranges = ""
+if (nrow(Dermo_range) > 0) {
+  MessDermo_ranges = ""
 } else {
-  MessSurveySH_ranges = "Congratulations! No out of range values detected."
+  MessDermo_ranges = "Congratulations! No out of range values detected."
+}
+
+if (nrow(Repro_range) > 0) {
+  MessRepro_ranges = ""
+} else {
+  MessRepro_ranges = "Congratulations! No out of range values detected."
 }
 ```
 
