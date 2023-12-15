@@ -434,13 +434,10 @@ null_CI <- filter(CI1, is.na(ShellHeight), is.na(ShellLength), is.na(ShellWidth)
   select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
 
   # Out of range values
-CI_range1 <- CI1 %>%
-  mutate(Predicted.Weight = 0.0005 * (ShellHeight ^ 2.6434), #This calculation needs revisiting
-         Pred.Vs.Actual = (Predicted.Weight - TotalWeight) / TotalWeight) %>%
-  filter(ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | Pred.Vs.Actual < -0.65 | Pred.Vs.Actual > 1.65) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, Predicted.Weight, Pred.Vs.Actual, Comments) 
+CI_range1 <- filter(CI1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | TotalWeight < 10 | TotalWeight > 250) %>%
+  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, Comments) 
 CI_range2 <- filter(CI1, TarePanWeight < 0.9 | TarePanWeight > 5 | TissueWetWeight < ((TotalWeight + TarePanWeight) * 0.05) | TissueWetWeight > ((TotalWeight + TarePanWeight) * 0.4) | ShellWetWeight < (TotalWeight * 0.5) | ShellWetWeight > (TotalWeight * 0.99) | TissueDryWeight < TarePanWeight | TissueDryWeight > (TissueWetWeight * 0.9) | ShellDryWeight < (ShellWetWeight * 0.8) | ShellDryWeight > ShellWetWeight) %>%
-  select(OysterID, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
+  select(OysterID, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
 
 ## Dermo #
   # Unexpected Null values
@@ -448,11 +445,8 @@ null_Dermo <- filter(Dermo1, is.na(ShellHeight), is.na(ShellLength), is.na(Shell
   select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, Comments)
 
   # Out of range values
-Dermo_range <- Dermo1 %>%
-  mutate(Predicted.Weight = 0.0005 * (ShellHeight ^ 2.6434), #This calculation needs revisiting
-         Pred.Vs.Actual = (Predicted.Weight - TotalWeight) / TotalWeight) %>%
-  filter(ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | Pred.Vs.Actual < -0.65 | Pred.Vs.Actual > 1.65 | DermoMantle < 0 | DermoMantle > 5 | DermoGill < 0 | DermoGill > 5) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, Predicted.Weight, Pred.Vs.Actual, DermoMantle, DermoGill, Comments)
+Dermo_range <- filter(Dermo1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | TotalWeight < 10 | TotalWeight > 250 | DermoMantle < 0 | DermoMantle > 5 | DermoGill < 0 | DermoGill > 5) %>%
+  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, DermoMantle, DermoGill, Comments)
 
 ## Repro #
   # Unexpected Null values
@@ -636,7 +630,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessCI_ranges`</p2>
 
-`r if (nrow(CI_range1) > 0) {kable(CI_range1, caption = "Out of range Condition data. Expected range for ShellHeight is 10 to 150 mm. Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. Expected range for Pred.Vs.Actual is -0.65 to 1.65. Comment required for out of range values.")}`
+`r if (nrow(CI_range1) > 0) {kable(CI_range1, caption = "Out of range Condition data. Expected range for ShellHeight is 10 to 150 mm. Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. Expected range for TotalWeight is 10 to 250 g. Comment required for out of range values.")}`
 
 `r if (nrow(CI_range2) > 0) {kable(CI_range2, caption = "Out of range Condition data. Expected range for TarePanWeight is 0.9 to 5.0 g. Expected range for TissueWetWeight is 5% to 40% of the sum of TotalWeight and TarePanWeight. Expected range for ShellWetWeight is 50% to 99% of TotalWeight. Expected range for TissueDryWeight is greater than TarePanWeight and up to 90% of TissueWetWeight. Expected range for ShellDryWeight is 80% to 100% of ShellWetWeight. Comment required for out of range values.")}`
 
@@ -644,7 +638,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessDermo_ranges`</p2>
 
-`r if (nrow(Dermo_range) > 0) {kable(Dermo_range, caption = "Out of range Dermo data. Expected range for ShellHeight is 10 to 150 mm. Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. Expected range for Pred.Vs.Actual is -0.65 to 1.65. Expected ranges for DermoMantle and DermoGill is 0 to 5. Comment required for out of range values.")}`
+`r if (nrow(Dermo_range) > 0) {kable(Dermo_range, caption = "Out of range Dermo data. Expected range for ShellHeight is 10 to 150 mm. Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. Expected range for TotalWeight is 10 to 250 g. Expected ranges for DermoMantle and DermoGill is 0 to 5. Comment required for out of range values.")}`
 
 <h4>--- Repro ---</h4>
 
