@@ -589,7 +589,7 @@ IF OBJECT_ID(\'tempdb..#ValidTrips\') IS NOT NULL BEGIN DROP TABLE
 
 CREATE TABLE #ValidTrips ( TripID VARCHAR(50) );
 
-INSERT INTO #ValidTrips (TripID) SELECT hsdb.TripID FROM TripInfo WHERE
+INSERT INTO #ValidTrips (TripID) SELECT TripID FROM hsdb.TripInfo WHERE
 TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
 DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`SRVY%\';
 
