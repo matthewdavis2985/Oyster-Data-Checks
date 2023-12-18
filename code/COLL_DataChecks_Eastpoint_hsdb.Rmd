@@ -7,8 +7,8 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-08-28")  # End Date for Checks
+CheckStart <- as.Date("2020-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2020-08-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
 Database = "OysterLocalMD20231019"
@@ -186,7 +186,7 @@ Repro1 <- hsdbRepro %>%
 
 ```{r DatabaseErrors}
 ### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the dbo schema
+# Ensure the Primary Keys are unique in the hsdb schema
 ERR_Table1 <- data.frame()
 ERR_Table1a <- data.frame()
 ERR_Table1b <- data.frame()
@@ -196,62 +196,62 @@ ERR_Table1e <- data.frame()
 ERR_Table1f <- data.frame()
 
 if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
-  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
+  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
     mutate(PrimaryKey = TripID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
-  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
+  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
     mutate(PrimaryKey = SampleEventID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
-  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
+  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
     mutate(PrimaryKey = SampleEventWQID) %>% 
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(CI1[duplicated(CI1$OysterID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "ConditionIndex", CI1[duplicated(CI1$OysterID), ])) %>% 
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "ConditionIndex", CI1[duplicated(CI1$OysterID), ])) %>% 
     mutate(PrimaryKey = OysterID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(Dermo1[duplicated(Dermo1$OysterID), ]) > 0) {
-  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Dermo", Dermo1[duplicated(Dermo1$OysterID), ])) %>% 
+  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "Dermo", Dermo1[duplicated(Dermo1$OysterID), ])) %>% 
     mutate(PrimaryKey = OysterID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(Repro1[duplicated(Repro1$OysterID), ]) > 0) {
-  ERR_Table1f <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Repro", ReproSH1[duplicated(Repro1$OysterID), ])) %>% 
+  ERR_Table1f <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "Repro", ReproSH1[duplicated(Repro1$OysterID), ])) %>% 
     mutate(PrimaryKey = OysterID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are unique in the hsdb schema
-ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, CI1$OysterID, Dermo1$OysterID, Repro1$OysterID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbCI$OysterID, hsdbDermo$OysterID, hsdbRepro$OysterID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "ConditionIndex", "Dermo", "Repro")
+# ERR_Tablex <- data.frame()
+# sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, CI1$OysterID, Dermo1$OysterID, Repro1$OysterID)
+# dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbCI$OysterID, hsdbDermo$OysterID, hsdbRepro$OysterID)
+# tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "ConditionIndex", "Dermo", "Repro")
+# 
+# # Loop through values
+# for (i in seq_along(sorc)) {
+#   for (j in seq_along(sorc[[i]])) {
+#     check_id <- sorc[[i]][j]
+#   # Check if the trip_id exists in TripInfo$TripID
+#     if ((check_id %in% dest[[i]])) {
+#     # Add trip_id to ERR_Table
+#       ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
+#     }
+#   }
+# }
 
-# Loop through values
-for (i in seq_along(sorc)) {
-  for (j in seq_along(sorc[[i]])) {
-    check_id <- sorc[[i]][j]
-  # Check if the trip_id exists in TripInfo$TripID
-    if ((check_id %in% dest[[i]])) {
-    # Add trip_id to ERR_Table
-      ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-    }
-  }
-}
-
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f, ERR_Tablex)
-rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f, ERR_Tablex)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f)
 
 
 ### DATABASE ERRORS ###
@@ -329,27 +329,27 @@ ERR_Table4c <- Repro1 %>%
 
 ### DATABASE ERRORS ###
 # Ensure that any field that MUST have a value is not null
-TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(TripID, TripDate, TripType, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate)) %>%
+  select(TripID, TripDate, TripType, Comments)
 
-SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventID, TripID, FixedLocationID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID)) %>%
+  select(SampleEventID, TripID, FixedLocationID, Comments)
 
-SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID)) %>%
+  select(SampleEventWQID, SampleEventID, Comments)
 
-ConditionIndex_nulls <- filter(CI1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+ConditionIndex_nulls <- filter(CI1, is.na(OysterID) | is.na(SampleEventID)) %>%
+  select(OysterID, SampleEventID, Comments)
 
-Dermo_nulls <- filter(Dermo1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+Dermo_nulls <- filter(Dermo1, is.na(OysterID) | is.na(SampleEventID)) %>%
+  select(OysterID, SampleEventID, Comments)
 
-Repro_nulls <- filter(Repro1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+Repro_nulls <- filter(Repro1, is.na(OysterID) | is.na(SampleEventID)) %>%
+  select(OysterID, SampleEventID, Comments)
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboRepro, dboDermo, dboCI, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbRepro, hsdbDermo, hsdbCI, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dest, FixedLocations1, hsdbRepro, hsdbDermo, hsdbCI, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
@@ -372,8 +372,8 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 
 ## SampleEvent #
   # Unexpected Null values
-null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec) | is.na(LatDec) | is.na(LatMin) | is.na(LongDec) | is.na(LongMin)) %>%
-  select(SampleEventID, LatitudeDec, LongitudeDec, LatDec, LatMin, LongDec, LongMin)
+null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec)) %>%
+  select(SampleEventID, LatitudeDec, LongitudeDec)
 
   # Out of range values
 SampleEvent_range <- SampleEvent1 %>%
