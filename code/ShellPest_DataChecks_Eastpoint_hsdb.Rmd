@@ -1,14 +1,14 @@
 ---
 title: "Collections Data Checks"
-subtitle: "Condition Index, Dermo, and Repro"
+subtitle: "Shell Pest"
 output:
   html_document:
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-08-28")  # End Date for Checks
+CheckStart <- as.Date("2020-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2020-08-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
 Database = "OysterLocalMD20231019"
@@ -21,9 +21,9 @@ library(odbc)
 library(DBI)
 library(dbplyr)
 library(lubridate)
-library(rMR)
-library(scales)
-library(geosphere)
+#library(rMR) DO saturation calculation
+library(scales) # Not sure if this library is needed or not
+#library(geosphere) SampleEvent distance calculations
 library(knitr)
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
@@ -74,130 +74,34 @@ dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
   collect() %>% 
   filter(Estuary == EstuaryCode)
 
-hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
-  collect() 
-
-dboTripInfo <- tbl(con,in_schema("dbo", "TripInfo")) %>%
-  collect() 
-  
-hsdbSampleEvent <- tbl(con,in_schema("hsdb", "SampleEvent")) %>%
-  collect() 
-  
-dboSampleEvent <- tbl(con,in_schema("dbo", "SampleEvent")) %>%
-  collect() 
-
-hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
-  collect() 
-
-dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
-  collect() 
-
 hsdbCI <- tbl(con,in_schema("hsdb", "ConditionIndex")) %>%
   collect() 
 
-dboCI <- tbl(con,in_schema("dbo", "ConditionIndex")) %>%
-  collect()
-
-hsdbDermo <- tbl(con,in_schema("hsdb", "Dermo")) %>%
+hsdbShellPest <- tbl(con,in_schema("hsdb", "ShellPest")) %>%
   collect() 
-
-dboDermo <- tbl(con,in_schema("dbo", "Dermo")) %>%
-  collect()
-
-hsdbRepro <- tbl(con,in_schema("hsdb", "Repro")) %>%
-  collect() 
-
-dboRepro <- tbl(con,in_schema("dbo", "Repro")) %>%
-  collect()
 
 DBI::dbDisconnect(con)
 
 ```
 
 ```{r DataFilters}
-# Filter data frames so that only data collected from Collections trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+# Filter data frames so that only data collected from Collections trips in the specified Estuary, in the correct date range, which have been Proofed, are present.ShellPest data MUST be done AFTER ConditionIndex checks are performed
 FixedLocations1 <- dboFixedLocations %>% 
-  mutate(StationNumber = as.numeric(StationNumber),
-         FixedLat = LatitudeDec,
-         FixedLon = LongitudeDec) %>% 
-  select(FixedLocationID, Estuary, SectionName, StationNumber, FixedLat, FixedLon) %>% 
+  mutate(StationNumber = as.numeric(StationNumber)) %>% 
+  select(FixedLocationID, Estuary, SectionName, StationNumber) %>% 
   distinct()
           
-TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(TripID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  arrange(TripID)
-
-TripInfo2 <- TripInfo1 %>%
-  select(TripID, TripDate, Comments) %>%
-  arrange(TripID)
-
-SampleEvent1 <- dboSampleEvent %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber)
-
-SampleEventWQ1 <- dboSampleEventWQ %>% 
-  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber, SampleEventWQID)
-
-CI1 <- dboCI %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  left_join(FixedLocations1, CI1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber, OysterID)
-
-Dermo1 <- dboDermo %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22),
-         DermoMantle = as.numeric(DermoMantle),
-         DermoGill = as.numeric(DermoGill)) %>% 
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  left_join(FixedLocations1, Dermo1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber, OysterID)
-
-Repro1 <- dboRepro %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22)) %>% 
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  left_join(FixedLocations1, Repro1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber, OysterID)
-
-hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(TripID,3,6) == "COLL")  %>%
-  arrange(TripID)
-
-hsdbSampleEvent <- hsdbSampleEvent %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
-  arrange(TripDate)
-
-hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
-  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "COLL") %>%
-  arrange(TripDate)
-
 hsdbCI <- hsdbCI %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Completed") %>%
   arrange(TripDate)
 
-hsdbDermo <- hsdbDermo %>% 
+hsdbShellPest <- ShellPest1 %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  arrange(TripDate)
-
-hsdbRepro <- hsdbRepro %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, ShellPest1, by = c("FixedLocationID")) %>%
   arrange(TripDate)
 
 ```
