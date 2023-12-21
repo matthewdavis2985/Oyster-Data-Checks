@@ -7,8 +7,8 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2020-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2020-08-28")  # End Date for Checks
+CheckStart <- as.Date("2017-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2017-08-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
 Database = "OysterLocalMD20231019"
@@ -75,6 +75,7 @@ dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
   filter(Estuary == EstuaryCode)
 
 hsdbCI <- tbl(con,in_schema("hsdb", "ConditionIndex")) %>%
+  mutate(DataStatus = "Completed") %>% # For teting only, remove line when done testing
   collect() 
 
 hsdbShellPest <- tbl(con,in_schema("hsdb", "ShellPest")) %>%
@@ -97,7 +98,7 @@ hsdbCI <- hsdbCI %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Completed") %>%
   arrange(TripDate)
 
-hsdbShellPest <- ShellPest1 %>% 
+ShellPest1 <- hsdbShellPest %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
@@ -108,174 +109,59 @@ hsdbShellPest <- ShellPest1 %>%
 
 ```{r DatabaseErrors}
 ### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the dbo schema
-ERR_Table1 <- data.frame()
-ERR_Table1a <- data.frame()
-ERR_Table1b <- data.frame()
-ERR_Table1c <- data.frame()
-ERR_Table1d <- data.frame()
-ERR_Table1e <- data.frame()
-ERR_Table1f <- data.frame()
-
-if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
-  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
-    mutate(PrimaryKey = TripID) %>%
-    select(schema, Table, PrimaryKey)
-}
-
-if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
-  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
-    mutate(PrimaryKey = SampleEventID) %>%
-    select(schema, Table, PrimaryKey)
-}
-
-if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
-  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
-    mutate(PrimaryKey = SampleEventWQID) %>% 
-    select(schema, Table, PrimaryKey)
-}
-
-if (nrow(CI1[duplicated(CI1$OysterID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "ConditionIndex", CI1[duplicated(CI1$OysterID), ])) %>% 
-    mutate(PrimaryKey = OysterID) %>%
-    select(schema, Table, PrimaryKey)
-}
-
-if (nrow(Dermo1[duplicated(Dermo1$OysterID), ]) > 0) {
-  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Dermo", Dermo1[duplicated(Dermo1$OysterID), ])) %>% 
-    mutate(PrimaryKey = OysterID) %>%
-    select(schema, Table, PrimaryKey)
-}
-
-if (nrow(Repro1[duplicated(Repro1$OysterID), ]) > 0) {
-  ERR_Table1f <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Repro", ReproSH1[duplicated(Repro1$OysterID), ])) %>% 
-    mutate(PrimaryKey = OysterID) %>%
-    select(schema, Table, PrimaryKey)
-}
-
-### DATABASE ERRORS ###
 # Ensure the Primary Keys are unique in the hsdb schema
-ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, CI1$OysterID, Dermo1$OysterID, Repro1$OysterID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbCI$OysterID, hsdbDermo$OysterID, hsdbRepro$OysterID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "ConditionIndex", "Dermo", "Repro")
+ERR_Table1 <- data.frame()
 
-# Loop through values
-for (i in seq_along(sorc)) {
-  for (j in seq_along(sorc[[i]])) {
-    check_id <- sorc[[i]][j]
-  # Check if the trip_id exists in TripInfo$TripID
-    if ((check_id %in% dest[[i]])) {
-    # Add trip_id to ERR_Table
-      ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-    }
-  }
+if (nrow(ShellPest1[duplicated(ShellPest1$ShellPestID), ]) > 0) {
+  ERR_Table1 <- bind_rows(data.frame(schema = "hsdb", Table = "ShellPest", ShellPest1[duplicated(ShellPest1$ShellPestID), ])) %>% 
+    mutate(PrimaryKey = ShellPestID) %>%
+    select(schema, Table, PrimaryKey)
 }
-
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f, ERR_Tablex)
-rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f, ERR_Tablex)
-
 
 ### DATABASE ERRORS ###
 # Ensure the Foreign Keys are not orphans
 # Create an empty data frame ERR_Table
 ERR_Table2 <- data.frame()
-sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, CI1$SampleEventID, Dermo1$SampleEventID, Repro1$SampleEventID)
-dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
-tabl <- list("SampleEvent", "SampleEventWQ", "ConditionIndex", "Dermo", "Repro")
+sorc <- list(ShellPest1$OysterID, ShellPest1$SampleEventID)
+dest <- list(hsdbCI$OysterID, hsdbCI$SampleEventID)
+tabl <- list("OysterID", "SampleEvent")
 
-# Loop through SampleEvent$TripID values
+# Loop through ShellPest1$OysterID values
 for (i in seq_along(sorc)) {
   for (j in seq_along(sorc[[i]])) {
     check_id <- sorc[[i]][j]
-  # Check if the trip_id exists in TripInfo$TripID
+  # Check if the id exists in hsdbCI$OysterID
     if (!(check_id %in% dest[[i]])) {
-    # Add trip_id to ERR_Table
-      ERR_Table2 <- rbind(ERR_Table2, data.frame(Table = tabl[[i]], OrphanForeignKey = check_id))
+    # Add id to ERR_Table if it is missing
+      ERR_Table2 <- rbind(ERR_Table2, data.frame(Key = tabl[[i]], OrphanForeignKey = check_id))
     }
   }
 }
 ERR_Table2 <- distinct(ERR_Table2) 
 
 ### DATABASE ERRORS ###
-# Ensure the Primary Keys are not childless
-ERR_Table3 <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
-dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, CI1$SampleEventID, Dermo1$SampleEventID, Repro1$SampleEventID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "SampleEvent", "SampleEvent")
-
-# Loop through SampleEvent$TripID values
-for (i in seq_along(sorc)) {
-  for (j in seq_along(sorc[[i]])) {
-    check_id <- sorc[[i]][j]
-    if (!(check_id %in% dest[[i]])) {
-      ERR_Table3 <- rbind(ERR_Table3, data.frame(Table = tabl[[i]], ChildlessPrimaryKey = check_id))
-    }
-  }
-}
-ERR_Table3 <- distinct(ERR_Table3) 
+# Ensure the Primary Keys are not childless. Not needed, no child records for ShellPest
+#ERR_Table3 <- data.frame()
 
 ### DATABASE ERRORS ###
-# Ensure that Primary Keys and Foreign Keys have been formed correctly
-ERR_Table4 <- data.frame()
-pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID)
-fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID)
-tabl <- list("SampleEvent", "SampleEventWQ")
-numb <- list(17, 24)
-
-for (i in seq_along(pkid)) {
-  for (j in seq_along(fkid[[i]])) {
-    check_fkid <- fkid[[i]][j]
-    check_pkid <- substring(pkid[[i]][j],1,numb[[i]])
-    if (check_fkid != check_pkid) {
-      ERR_Table4 <- rbind(ERR_Table4, data.frame(Table = tabl[[i]], PrimaryKey = pkid[[i]][j], ForeignKey = check_fkid))
-    }
-  }
-}
-
-# Ensure that Primary Keys and Foreign Keys have been formed correctly for OysterID in CI, Dermo, and Repro
-ERR_Table4a <- CI1 %>%
+# Ensure that Primary Keys and Foreign Keys have been formed correctly for OysterID in ShellPest
+ERR_Table4 <- ShellPest1 %>%
   mutate(ExpectedPK = paste0(Estuary, SectionName, "C", substr(year(TripDate), 3, 4), format(TripDate, "%m"), "-", substr(OysterID, 10, 11))) %>%
-  filter(OysterID != ExpectedPK) %>%
-  select(PrimaryKey = "OysterID", SampleEventID, ExpectedPK)
-
-ERR_Table4b <- Dermo1 %>%
-  mutate(ExpectedPK = paste0(Estuary, SectionName, "D", substr(year(TripDate), 3, 4), format(TripDate, "%m"), "-", substr(OysterID, 10, 11))) %>%
-  filter(OysterID != ExpectedPK) %>%
-  select(PrimaryKey = "OysterID", SampleEventID, ExpectedPK)
-
-ERR_Table4c <- Repro1 %>%
-  mutate(ExpectedPK = paste0(Estuary, SectionName, "D", substr(year(TripDate), 3, 4), format(TripDate, "%m"), "-", substr(OysterID, 10, 11))) %>%
   filter(OysterID != ExpectedPK) %>%
   select(PrimaryKey = "OysterID", SampleEventID, ExpectedPK)
 
 ### DATABASE ERRORS ###
 # Ensure that any field that MUST have a value is not null
-TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(TripID, TripDate, TripType, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
-
-SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventID, TripID, FixedLocationID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
-
-SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
-
-ConditionIndex_nulls <- filter(CI1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
-
-Dermo_nulls <- filter(Dermo1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
-
-Repro_nulls <- filter(Repro1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+ShellPest_nulls <- filter(ShellPest1, is.na(ShellPestID), is.na(OysterID) | is.na(SampleEventID) | is.na(PhotoSurface) | is.na(DateProcessed) | is.na(ProcessedBy) | is.na(OldSampleNumber) ) %>%
+  select(ShellPestID, OysterID, SampleEventID, PhotoSurface, DateProcessed, ProcessedBy, OldSampleNumber, Comments)
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboRepro, dboDermo, dboCI, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbRepro, hsdbDermo, hsdbCI, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+#rm(dboFixedLocations, dest, FixedLocations1, hsdbCI, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
-if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table4) > 0 | nrow(ERR_Table4a) > 0 | nrow(ERR_Table4b) > 0 | nrow(ERR_Table4c) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(ConditionIndex_nulls) > 0 | nrow(Dermo_nulls) > 0 | nrow(Repro_nulls) > 0) {
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table4) > 0 | nrow(ShellPest_nulls) > 0) {
   MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
   MessERR_Tables2 = ""
 } else {
@@ -288,54 +174,10 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 ### DATA ERRORS ###
 #Value ranges below represent historically high or low values. Actual values can be outside that range and may or may not require a Comment, unless noted otherwise. 
 
-## TripInfo #
-  # There are no fields that require a Comment if they are NULL.
-  # There are no out of range values for this table
-
-## SampleEvent #
+## ShellPest #
   # Unexpected Null values
-null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec) | is.na(LatDec) | is.na(LatMin) | is.na(LongDec) | is.na(LongMin)) %>%
-  select(SampleEventID, LatitudeDec, LongitudeDec, LatDec, LatMin, LongDec, LongMin)
-
-  # Out of range values
-SampleEvent_range <- SampleEvent1 %>%
-  rowwise() %>%
-  mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>%
-  filter(DistFromFixed > 1852) %>% # Flags SampleEvents that occur over 1,852 meters (1 nautical mile) from the assigned FixedLocation.  
-  select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed)
-  
-## Water Quality #
-  # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
-
-  # Out of range values
-Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
-Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 35) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
-DO_range <- SampleEventWQ1 %>% 
-  mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
-  filter(DO.Sat < 0.50 | DO.Sat > 1.20) %>%
-  mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, DO.Sat, Comments)
-pH_range <- filter(SampleEventWQ1, pH < 7.0 | pH > 8.5) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, pH, Comments)
-Depth_range <- filter(SampleEventWQ1, Depth < 0 | Depth > 3.5) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
-SampleDepth_range <- filter(SampleEventWQ1, SampleDepth < 0 | SampleDepth > Depth) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
-Secchi_range <- filter(SampleEventWQ1, Secchi < 0 | Secchi > Depth) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Secchi, Comments)
-TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
-TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
-
-## ConditionIndex #
-  # Unexpected Null values
-null_CI <- filter(CI1, is.na(ShellHeight), is.na(ShellLength), is.na(ShellWidth), is.na(TotalWeight), is.na(TarePanWeight), is.na(TissueWetWeight), is.na(ShellWetWeight), is.na(TissueDryWeight), is.na(ShellDryWeight)) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
+null_ShellPest <- filter(ShellPest1, is.na(TotalArea), is.na(TotalHeight), is.na(TotalLength), is.na(ClionaArea), is.na(PolydoraArea), is.na(ClamCount), is.na(ClamAverageDiameter)) %>%
+  select(ShellPestID, TotalArea, TotalHeight, TotalLength, ClionaArea, PolydoraArea, ClamCount, ClamAverageDiameter, Comments)
 
   # Out of range values
 CI_range1 <- filter(CI1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | TotalWeight < 10 | TotalWeight > 250) %>%
@@ -343,24 +185,6 @@ CI_range1 <- filter(CI1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20
 CI_range2 <- filter(CI1, TarePanWeight < 0.9 | TarePanWeight > 5 | TissueWetWeight < ((TotalWeight + TarePanWeight) * 0.05) | TissueWetWeight > ((TotalWeight + TarePanWeight) * 0.4) | ShellWetWeight < (TotalWeight * 0.5) | ShellWetWeight > (TotalWeight * 0.99) | TissueDryWeight < TarePanWeight | TissueDryWeight > (TissueWetWeight * 0.9) | ShellDryWeight < (ShellWetWeight * 0.8) | ShellDryWeight > ShellWetWeight) %>%
   select(OysterID, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
 
-## Dermo #
-  # Unexpected Null values
-null_Dermo <- filter(Dermo1, is.na(ShellHeight), is.na(ShellLength), is.na(ShellWidth), is.na(TotalWeight), is.na(ShellWetWeight), is.na(DermoMantle), is.na(DermoGill)) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, Comments)
-
-  # Out of range values
-Dermo_range <- filter(Dermo1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | TotalWeight < 10 | TotalWeight > 250 | DermoMantle < 0 | DermoMantle > 5 | DermoGill < 0 | DermoGill > 5) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, DermoMantle, DermoGill, Comments)
-
-## Repro #
-  # Unexpected Null values
-null_Repro <- filter(Repro1, is.na(Sex), is.na(Parasite), is.na(BadSlide)) %>%
-  select(OysterID, Sex, ReproStage, Parasite, BadSlide, Comments)
-
-  # Out of range values
-Repro_range <- Repro1 %>%
-  filter((Sex == "M/F" & !is.na(ReproStage)) | (Parasite == "Buceph" & !is.na(ReproStage)) | (ReproStage == 4 & Sex != "Z")) %>%
-  select(OysterID, Sex, ReproStage, Parasite, BadSlide, Comments)
 
 ## Set error messages #
 
