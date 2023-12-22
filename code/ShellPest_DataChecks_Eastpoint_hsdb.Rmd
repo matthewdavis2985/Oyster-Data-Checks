@@ -91,7 +91,7 @@ FixedLocations1 <- dboFixedLocations %>%
   mutate(StationNumber = as.numeric(StationNumber)) %>% 
   select(FixedLocationID, Estuary, SectionName, StationNumber) %>% 
   distinct()
-          
+
 hsdbCI <- hsdbCI %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
@@ -105,6 +105,9 @@ ShellPest1 <- hsdbShellPest %>%
   left_join(FixedLocations1, ShellPest1, by = c("FixedLocationID")) %>%
   arrange(TripDate)
 
+TripInfo1 <- select(ShellPest1, TripDate) %>%
+  distinct()
+  
 ```
 
 ```{r DatabaseErrors}
@@ -216,7 +219,7 @@ These data checks were run on trips occurring between
 by <p2>`r DataManager`</p2> on
 <p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
 
-`r kable(TripInfo2, caption = "Data from these trips is included in these checks")`
+`r kable(TripInfo1, caption = "Data from these trips is included in these checks")`
 
 <h2>Database Errors:</h2>
 
@@ -226,27 +229,9 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
 
-`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present.")}`
-
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
-`r if (nrow(ERR_Table4a) > 0) {kable(ERR_Table4a, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
-
-`r if (nrow(ERR_Table4b) > 0) {kable(ERR_Table4b, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
-
-`r if (nrow(ERR_Table4c) > 0) {kable(ERR_Table4c, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
-
-`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
-
-`r if (nrow(SampleEvent_nulls) > 0) {kable(SampleEvent_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
-
-`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
-
-`r if (nrow(ConditionIndex_nulls) > 0) {kable(ConditionIndex_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
-
-`r if (nrow(Dermo_nulls) > 0) {kable(Dermo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
-
-`r if (nrow(Repro_nulls) > 0) {kable(Repro_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(ShellPest_nulls) > 0) {kable(ShellPest_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
 <h2>Data Errors:</h2>
 
@@ -255,247 +240,60 @@ by <p2>`r DataManager`</p2> on
 The following fields are expected to either contain data or have a
 comment explaining why the data is missing.
 
-<h4>--- Sample Event ---</h4>
+<h4>--- Shell Pest ---</h4>
 
-<p2>`r Mess_null_SampleEvents`</p2>
+<p2>`r Mess_null_ShellPest`</p2>
 
-`r if (nrow(null_SampleEvents) > 0) {kable(null_SampleEvents, caption = "Null Sample Event Data. Comment Required for all Null values")}`
-
-<h4>--- Water Quality ---</h4>
-
-<p2>`r Mess_null_WQs`</p2>
-
-`r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment Required for all Null values")}`
-
-<h4>--- Condition Index ---</h4>
-
-<p2>`r Mess_null_CI`</p2>
-
-`r if (nrow(null_CI) > 0) {kable(null_CI, caption = "Null Condition Index Data. Comment Required for all Null values")}`
-
-<h4>--- Dermo ---</h4>
-
-<p2>`r Mess_null_Dermo`</p2>
-
-`r if (nrow(null_Dermo) > 0) {kable(null_Dermo, caption = "Null Dermo Data. Comment Required for all Null values")}`
-
-<h4>--- Repro ---</h4>
-
-<p2>`r Mess_null_Repro`</p2>
-
-`r if (nrow(null_Repro) > 0) {kable(null_Repro, caption = "Null Repro Data. Comment Required for all Null values")}`
+`r if (nrow(null_ShellPest) > 0) {kable(null_ShellPest, caption = "Null Sample Event Data. Comment Required for all Null values")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
 Value ranges below represent historically high or low values. Actual
 values can be outside that range and may or may not require a Comment.
 
-<h4>--- Sample Event ---</h4>
+<h4>--- Shell Pest ---</h4>
 
-<p2>`r MessSampleEvent_ranges`</p2>
+<p2>`r MessShellPest_ranges`</p2>
 
-`r if (nrow(SampleEvent_range) > 0) {kable(SampleEvent_range, caption = "Out of range distance from Fixed Location. Expected range is 1,852 meters (1 nautical mile). Comment required for out of range values.")}`
+`r if (nrow(ShellPest_range1) > 0) {kable(ShellPest_range1, caption = "Out of range Shell Pest data. Expected range for TotalArea is 50% to 90% of MaxArea. Expected range for TotalHeight is 60% to 140% of ShellHeight. Expected range for ShellLength is 60% to 140% of ShellLength. Comment required for out of range values.")}`
 
-<h4>--- Water Quality ---</h4>
-
-<p2>`r MessWQ_ranges`</p2>
-
-`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
-
-`r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
-
-`r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range dissolved oxygen data. Expected range is 50% to 120% saturation. . Comment required for out of range values.")}`
-
-`r if (nrow(pH_range) > 0) {kable(pH_range, caption = "Out of range pH data. Expected range is 7.0 to 8.5. Comment required for out of range values.")}`
-
-`r if (nrow(Depth_range) > 0) {kable(Depth_range, caption = "Out of range depth data. Expected range is 0.0 to 3.5 m. Cannot be less than 0. Comment required for out of range values.")}`
-
-`r if (nrow(SampleDepth_range) > 0) {kable(SampleDepth_range, caption = "Out of range Sample depth data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
-
-`r if (nrow(Secchi_range) > 0) {kable(Secchi_range, caption = "Out of range Secchi data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
-
-`r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
-
-<h4>--- Condition Index ---</h4>
-
-<p2>`r MessCI_ranges`</p2>
-
-`r if (nrow(CI_range1) > 0) {kable(CI_range1, caption = "Out of range Condition data. Expected range for ShellHeight is 10 to 150 mm. Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. Expected range for TotalWeight is 10 to 250 g. Comment required for out of range values.")}`
-
-`r if (nrow(CI_range2) > 0) {kable(CI_range2, caption = "Out of range Condition data. Expected range for TarePanWeight is 0.9 to 5.0 g. Expected range for TissueWetWeight is 5% to 40% of the sum of TotalWeight and TarePanWeight. Expected range for ShellWetWeight is 50% to 99% of TotalWeight. Expected range for TissueDryWeight is greater than TarePanWeight and up to 90% of TissueWetWeight. Expected range for ShellDryWeight is 80% to 100% of ShellWetWeight. Comment required for out of range values.")}`
-
-<h4>--- Dermo ---</h4>
-
-<p2>`r MessDermo_ranges`</p2>
-
-`r if (nrow(Dermo_range) > 0) {kable(Dermo_range, caption = "Out of range Dermo data. Expected range for ShellHeight is 10 to 150 mm. Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. Expected range for TotalWeight is 10 to 250 g. Expected ranges for DermoMantle and DermoGill is 0 to 5. Comment required for out of range values.")}`
-
-<h4>--- Repro ---</h4>
-
-<p2>`r MessRepro_ranges`</p2>
-
-`r if (nrow(Repro_range) > 0) {kable(Repro_range, caption = "Out of range Repro data. If Sex = M/F, ReproStage MUST be Null. If Parasite = Buceph, ReproStage MUST be Null. If ReproStage = 4, Sex MUST = Z.")}`
+`r if (nrow(ShellPest_range2) > 0) {kable(ShellPest_range2, caption = "Out of range Shell Pest data. Expected range for ClionaArea is 0 to 95% of TotalArea. Expected range for PolydoraArea is 0 to 95% of TotalArea. Expected range for ClamCount is 0 to 10. Expected range for ClamAverageDiameter is 0 to 6.0 mm. Comment required for out of range values.")}`
 
 <h2>SQL Code:</h2>
 
 If there are no Database Errors detected and all Data Errors have been
 addressed, you may use the following SQL code to Complete these data.
 This code will update the DataStatus, CompletedBy, and DateCompleted
-fields; it will copy the data to the hsdb schema; and it will remove the
-data from the dbo schema.
+fields in the hsdb schema.
 
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
 \~\~\~\~ Note to self: The bulk of this code may be better as a Stored
 Procedure. Then the SQL Code here would be:\
-EXEC sp_CompleteCollections \'`r EstuaryCode`\', \'`r CheckStart`\',
+EXEC sp_CompleteShellPest_hsdb \'`r EstuaryCode`\', \'`r CheckStart`\',
 \'`r CheckEnd`\', \'`r DataManager`\';
 
 \~\~\~\~ SQL code with comments in un-run chunk at end.
 
 \~\~\~\~ End note
 
-IF OBJECT_ID(\'tempdb..#ValidTrips\') IS NOT NULL BEGIN DROP TABLE
-#ValidTrips; END
-
-CREATE TABLE #ValidTrips ( TripID VARCHAR(50) );
-
-INSERT INTO #ValidTrips (TripID) SELECT TripID FROM TripInfo WHERE
-TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
-DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`SRVY%\';
-
-UPDATE TripInfo SET DataStatus = \'Completed\', CompletedBy =
+UPDATE hsdb.ShellPest SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
-UPDATE SampleEvent SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d.%B.%Y")`\'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
-UPDATE SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
-TripID IN (SELECT TripID FROM #ValidTrips));
-
-UPDATE ConditionIndex SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
-TripID IN (SELECT TripID FROM #ValidTrips));
-
-UPDATE Dermo SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
-TripID IN (SELECT TripID FROM #ValidTrips));
-
-UPDATE Repro SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
-TripID IN (SELECT TripID FROM #ValidTrips));
-
-INSERT INTO hsdb.TripInfo SELECT \* FROM TripInfo WHERE DataStatus =
-\'Completed\';
-
-DELETE FROM dbo.TripInfo WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SampleEvent SELECT \* FROM SampleEvent WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.SampleEvent WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SampleEventWQ SELECT \* FROM SampleEventWQ WHERE
-DataStatus = \'Completed\';
-
-DELETE FROM dbo.SampleEventWQ WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.ConditionIndex SELECT \* FROM ConditionIndex WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.ConditionIndex WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.Dermo SELECT \* FROM Dermo WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.Dermo WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.Repro SELECT \* FROM Repro WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.Repro WHERE DataStatus = \'Completed\';
+WHERE SUBSTRING(SampleEventID, 1, 2) = \'`r EstuaryCode`\' AND
+CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \> \'`r CheckStart`\' AND
+CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \< \'`r CheckEnd`\' 
 
 `r knit_exit()`
 
 ```{sql SQL code, eval=FALSE, include=FALSE}
 
--- Check that there is not already a temporary table to store valid TripIDs. If there is, DELETE it and create a clean temporary table
-IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
-BEGIN
-    DROP TABLE #ValidTrips;
-END
+-- Query the ShellPest table
 
-CREATE TABLE #ValidTrips (
-    TripID VARCHAR(50)
-);
-
-INSERT INTO #ValidTrips (TripID)
-SELECT TripID
-FROM TripInfo
-WHERE TripDate > '`r CheckStart`' AND TripDate < '`r CheckEnd`'
-AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`SRVY%';
-
--- Query the TripInfo table using the temporary table
-UPDATE TripInfo 
+UPDATE hsdb.ShellPest 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
--- Query the SampleEvent table using the temporary table
-UPDATE SampleEvent 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d.%B.%Y")`'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
--- Query the SampleEventWQ table using the temporary table
-UPDATE SampleEventWQ 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
-
--- Query the ConditionIndex table using the temporary table
-UPDATE ConditionIndex 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
-
--- Query the Dermo table using the temporary table
-UPDATE Dermo 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
-
--- Query the Repro table using the temporary table
-UPDATE Repro 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
-
--- Insert the Completed data into hsdb, and DELETE FROM dbo
-INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.ConditionIndex SELECT * FROM ConditionIndex WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.ConditionIndex WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.Dermo SELECT * FROM Dermo WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.Dermo WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.Repro SELECT * FROM Repro WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.Repro WHERE DataStatus = 'Completed';
+WHERE SUBSTRING(SampleEventID, 1, 2) = '`EstuaryCode`'
+AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) > '`r CheckStart`' 
+AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) < '`r CheckEnd`';
 
 ```
