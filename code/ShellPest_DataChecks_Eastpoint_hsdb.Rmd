@@ -122,9 +122,9 @@ if (nrow(ShellPest1[duplicated(ShellPest1$ShellPestID), ]) > 0) {
 # Ensure the Foreign Keys are not orphans
 # Create an empty data frame ERR_Table
 ERR_Table2 <- data.frame()
-sorc <- list(ShellPest1$OysterID, ShellPest1$SampleEventID)
-dest <- list(hsdbCI$OysterID, hsdbCI$SampleEventID)
-tabl <- list("OysterID", "SampleEvent")
+sorc <- list(ShellPest1$OysterID, ShellPest1$SampleEventID, hsdbCI$OysterID)
+dest <- list(hsdbCI$OysterID, hsdbCI$SampleEventID, ShellPest1$OysterID)
+tabl <- list("ShellPest", "SampleEvent", "ConditionIndex")
 
 # Loop through ShellPest1$OysterID values
 for (i in seq_along(sorc)) {
@@ -133,7 +133,7 @@ for (i in seq_along(sorc)) {
   # Check if the id exists in hsdbCI$OysterID
     if (!(check_id %in% dest[[i]])) {
     # Add id to ERR_Table if it is missing
-      ERR_Table2 <- rbind(ERR_Table2, data.frame(Key = tabl[[i]], OrphanForeignKey = check_id))
+      ERR_Table2 <- rbind(ERR_Table2, data.frame(Table = tabl[[i]], OrphanForeignKey = check_id))
     }
   }
 }
@@ -180,73 +180,35 @@ null_ShellPest <- filter(ShellPest1, is.na(TotalArea), is.na(TotalHeight), is.na
   select(ShellPestID, TotalArea, TotalHeight, TotalLength, ClionaArea, PolydoraArea, ClamCount, ClamAverageDiameter, Comments)
 
   # Out of range values
-CI_range1 <- filter(CI1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | TotalWeight < 10 | TotalWeight > 250) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, Comments) 
-CI_range2 <- filter(CI1, TarePanWeight < 0.9 | TarePanWeight > 5 | TissueWetWeight < ((TotalWeight + TarePanWeight) * 0.05) | TissueWetWeight > ((TotalWeight + TarePanWeight) * 0.4) | ShellWetWeight < (TotalWeight * 0.5) | ShellWetWeight > (TotalWeight * 0.99) | TissueDryWeight < TarePanWeight | TissueDryWeight > (TissueWetWeight * 0.9) | ShellDryWeight < (ShellWetWeight * 0.8) | ShellDryWeight > ShellWetWeight) %>%
-  select(OysterID, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
-
+ShellPest2 <- right_join(hsdbCI, ShellPest1, by = c("OysterID")) %>%
+  select(ShellPestID, OysterID,SampleEventID.x, ShellHeight, ShellLength, OldSampleNumber.x, PhotoSurface, TotalArea, TotalHeight, TotalLength, ClionaArea, PolydoraArea, ClamCount, ClamAverageDiameter, Comments.y) %>%
+  mutate(MaxArea = ShellHeight * ShellLength)
+ShellPest_range1 <- filter(ShellPest2, 
+                           TotalArea < MaxArea * 0.5 | TotalArea > MaxArea * 0.9 | 
+                             TotalHeight < ShellHeight * 0.6 | TotalHeight > ShellHeight * 1.4 |
+                             TotalLength < ShellLength * 0.6 | TotalLength > ShellLength * 1.4) %>%
+  select(ShellPestID, OysterID, ShellHeight, TotalHeight, ShellLength, TotalLength, TotalArea, MaxArea, Comments.y) 
+ShellPest_range2 <- filter(ShellPest2, 
+                           ClionaArea < 0 | ClionaArea > TotalArea * 0.95 | 
+                             PolydoraArea < 0 | PolydoraArea > TotalArea * 0.95 | 
+                             ClamCount < 0 | ClamCount > 10 | 
+                             ClamAverageDiameter < 0 | ClamAverageDiameter > 6) %>%
+  select(ShellPestID, OysterID, TotalArea, ClionaArea, PolydoraArea, ClamCount, ClamAverageDiameter, Comments.y)
 
 ## Set error messages #
 
-if (nrow(null_SampleEvents) > 0) {
-  Mess_null_SampleEvents = ""
+if (nrow(null_ShellPest) > 0) {
+  Mess_null_ShellPest = ""
 } else {
-  Mess_null_SampleEvents = "Congratulations! No unexpected null values detected."
-}
-  
-if (nrow(null_WQs) > 0) {
-  Mess_null_WQs = ""
-} else {
-  Mess_null_WQs = "Congratulations! No unexpected null values detected."
+  Mess_null_ShellPest = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_CI) > 0) {
-  Mess_null_CI = ""
+if (nrow(ShellPest_range1) > 0 | nrow(ShellPest_range2) > 0) {
+  MessShellPest_ranges = ""
 } else {
-  Mess_null_CI = "Congratulations! No unexpected null values detected."
+  MessShellPest_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(null_Dermo) > 0) {
-  Mess_null_Dermo = ""
-} else {
-  Mess_null_Dermo = "Congratulations! No unexpected null values detected."
-}
-
-if (nrow(null_Repro) > 0) {
-  Mess_null_Repro = ""
-} else {
-  Mess_null_Repro = "Congratulations! No unexpected null values detected."
-}
-
-if (nrow(SampleEvent_range) > 0) {
-  MessSampleEvent_ranges = ""
-} else {
-  MessSampleEvent_ranges = "Congratulations! No out of range values detected."
-}
-
-if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
-  MessWQ_ranges = ""
-} else {
-  MessWQ_ranges = "Congratulations! No out of range values detected."
-}
-
-if (nrow(CI_range1) > 0 | nrow(CI_range2) > 0) {
-  MessCI_ranges = ""
-} else {
-  MessCI_ranges = "Congratulations! No out of range values detected."
-}
-
-if (nrow(Dermo_range) > 0) {
-  MessDermo_ranges = ""
-} else {
-  MessDermo_ranges = "Congratulations! No out of range values detected."
-}
-
-if (nrow(Repro_range) > 0) {
-  MessRepro_ranges = ""
-} else {
-  MessRepro_ranges = "Congratulations! No out of range values detected."
-}
 ```
 
 These data checks were run on trips occurring between
