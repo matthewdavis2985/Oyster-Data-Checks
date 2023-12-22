@@ -1,0 +1,291 @@
+---
+title: "Collections Data Checks"
+subtitle: "Shell Pest"
+output:
+  html_document:
+---
+
+```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
+# Set your variables
+CheckStart <- as.Date("2017-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2017-08-28")  # End Date for Checks
+EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
+DataManager = "Matthew Davis"
+Database = "OysterLocalMD20231019"
+```
+
+```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
+# Load necessary R packages and configure chunks
+library(tidyverse)
+library(odbc)
+library(DBI)
+library(dbplyr)
+library(lubridate)
+library(knitr)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+```{css}
+/* Sets the fonts for the RMarkdown output */
+p {
+font-size: 8pt;
+}
+
+p2 {
+font-weight: bold;
+}
+
+h1 {
+font-size: 18pt;
+font-weight: bold;
+}
+
+h2 {
+font-size: 14pt;
+font-weight: bold;
+}
+
+h3 {
+font-size: 12pt;
+font-style: italic;
+}
+
+h4 {
+font-size: 10pt;
+text-indent: 5%;
+font-weight: bold;
+}
+```
+
+```{r DatabaseDownload}
+# Connect to Local database server and pull all necessary data, then close connection 
+con <- dbConnect(odbc(),
+                    Driver = "SQL Server", 
+                    Server = "localhost\\MATTLOCALSQL",
+                    Database = Database,
+                    Authentication = "ActiveDirectoryIntegrated")
+
+dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
+  collect() %>% 
+  filter(Estuary == EstuaryCode)
+
+hsdbCI <- tbl(con,in_schema("hsdb", "ConditionIndex")) %>%
+  mutate(DataStatus = "Completed") %>% # For teting only, remove line when done testing
+  collect() 
+
+hsdbShellPest <- tbl(con,in_schema("hsdb", "ShellPest")) %>%
+  collect() 
+
+DBI::dbDisconnect(con)
+```
+
+```{r DataFilters}
+# Filter data frames so that only data collected from Collections trips in the specified Estuary, in the correct date range, which have been Proofed, are present.ShellPest data MUST be done AFTER ConditionIndex checks are performed
+FixedLocations1 <- dboFixedLocations %>% 
+  mutate(StationNumber = as.numeric(StationNumber)) %>% 
+  select(FixedLocationID, Estuary, SectionName, StationNumber) %>% 
+  distinct()
+
+hsdbCI <- hsdbCI %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Completed") %>%
+  arrange(TripDate)
+
+ShellPest1 <- hsdbShellPest %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, ShellPest1, by = c("FixedLocationID")) %>%
+  arrange(TripDate)
+
+TripInfo1 <- select(ShellPest1, TripDate) %>%
+  distinct()
+```
+
+```{r DatabaseErrors}
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are unique in the hsdb schema
+ERR_Table1 <- data.frame()
+
+if (nrow(ShellPest1[duplicated(ShellPest1$ShellPestID), ]) > 0) {
+  ERR_Table1 <- bind_rows(data.frame(schema = "hsdb", Table = "ShellPest", ShellPest1[duplicated(ShellPest1$ShellPestID), ])) %>% 
+    mutate(PrimaryKey = ShellPestID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+### DATABASE ERRORS ###
+# Ensure the Foreign Keys are not orphans
+# Create an empty data frame ERR_Table
+ERR_Table2 <- data.frame()
+sorc <- list(ShellPest1$OysterID, ShellPest1$SampleEventID, hsdbCI$OysterID)
+dest <- list(hsdbCI$OysterID, hsdbCI$SampleEventID, ShellPest1$OysterID)
+tabl <- list("ShellPest", "SampleEvent", "ConditionIndex")
+
+# Loop through ShellPest1$OysterID values
+for (i in seq_along(sorc)) {
+  for (j in seq_along(sorc[[i]])) {
+    check_id <- sorc[[i]][j]
+  # Check if the id exists in hsdbCI$OysterID
+    if (!(check_id %in% dest[[i]])) {
+    # Add id to ERR_Table if it is missing
+      ERR_Table2 <- rbind(ERR_Table2, data.frame(Table = tabl[[i]], OrphanForeignKey = check_id))
+    }
+  }
+}
+ERR_Table2 <- distinct(ERR_Table2) 
+
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are not childless. Not needed, no child records for ShellPest
+#ERR_Table3 <- data.frame()
+
+### DATABASE ERRORS ###
+# Ensure that Primary Keys and Foreign Keys have been formed correctly for OysterID in ShellPest
+ERR_Table4 <- ShellPest1 %>%
+  mutate(ExpectedPK = paste0(Estuary, SectionName, "C", substr(year(TripDate), 3, 4), format(TripDate, "%m"), "-", substr(OysterID, 10, 11))) %>%
+  filter(OysterID != ExpectedPK) %>%
+  select(PrimaryKey = "OysterID", SampleEventID, ExpectedPK)
+
+### DATABASE ERRORS ###
+# Ensure that any field that MUST have a value is not null
+ShellPest_nulls <- filter(ShellPest1, is.na(ShellPestID), is.na(OysterID) | is.na(SampleEventID) | is.na(PhotoSurface) | is.na(DateProcessed) | is.na(ProcessedBy) | is.na(OldSampleNumber) ) %>%
+  select(ShellPestID, OysterID, SampleEventID, PhotoSurface, DateProcessed, ProcessedBy, OldSampleNumber, Comments)
+
+# Remove unneeded data frames and values
+
+rm(dboFixedLocations, dest, FixedLocations1, hsdbCI, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+
+# Set Error Messages for Database Errors
+
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table4) > 0 | nrow(ShellPest_nulls) > 0) {
+  MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
+  MessERR_Tables2 = ""
+} else {
+  MessERR_Tables1 = ""
+  MessERR_Tables2 = "Congratulations! No Database errors found. Primary Keys are unique and not childless. Foreign Keys are not orphans and are properly formed. All critical fields contain data. You may proceed."
+}
+```
+
+```{r Data Errors}
+### DATA ERRORS ###
+#Value ranges below represent historically high or low values. Actual values can be outside that range and may or may not require a Comment, unless noted otherwise. 
+
+## ShellPest #
+  # Unexpected Null values
+null_ShellPest <- filter(ShellPest1, is.na(TotalArea), is.na(TotalHeight), is.na(TotalLength), is.na(ClionaArea), is.na(PolydoraArea), is.na(ClamCount), is.na(ClamAverageDiameter)) %>%
+  select(ShellPestID, TotalArea, TotalHeight, TotalLength, ClionaArea, PolydoraArea, ClamCount, ClamAverageDiameter, Comments)
+
+  # Out of range values
+ShellPest2 <- right_join(hsdbCI, ShellPest1, by = c("OysterID")) %>%
+  select(ShellPestID, OysterID,SampleEventID.x, ShellHeight, ShellLength, OldSampleNumber.x, PhotoSurface, TotalArea, TotalHeight, TotalLength, ClionaArea, PolydoraArea, ClamCount, ClamAverageDiameter, Comments.y) %>%
+  mutate(MaxArea = ShellHeight * ShellLength)
+ShellPest_range1 <- filter(ShellPest2, 
+                           TotalArea < MaxArea * 0.5 | TotalArea > MaxArea * 0.9 | 
+                             TotalHeight < ShellHeight * 0.6 | TotalHeight > ShellHeight * 1.4 |
+                             TotalLength < ShellLength * 0.6 | TotalLength > ShellLength * 1.4) %>%
+  select(ShellPestID, OysterID, ShellHeight, TotalHeight, ShellLength, TotalLength, TotalArea, MaxArea, Comments.y) 
+ShellPest_range2 <- filter(ShellPest2, 
+                           ClionaArea < 0 | ClionaArea > TotalArea * 0.95 | 
+                             PolydoraArea < 0 | PolydoraArea > TotalArea * 0.95 | 
+                             ClamCount < 0 | ClamCount > 10 | 
+                             ClamAverageDiameter < 0 | ClamAverageDiameter > 6) %>%
+  select(ShellPestID, OysterID, TotalArea, ClionaArea, PolydoraArea, ClamCount, ClamAverageDiameter, Comments.y)
+
+## Set error messages #
+
+if (nrow(null_ShellPest) > 0) {
+  Mess_null_ShellPest = ""
+} else {
+  Mess_null_ShellPest = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(ShellPest_range1) > 0 | nrow(ShellPest_range2) > 0) {
+  MessShellPest_ranges = ""
+} else {
+  MessShellPest_ranges = "Congratulations! No out of range values detected."
+}
+```
+
+These data checks were run on trips occurring between
+<p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
+by <p2>`r DataManager`</p2> on
+<p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
+
+`r kable(TripInfo1, caption = "Data from these trips is included in these checks")`
+
+<h2>Database Errors:</h2>
+
+<h1>`r MessERR_Tables1`</h1> <p2>`r MessERR_Tables2`</p2>
+
+`r if (nrow(ERR_Table1) > 0) {kable(ERR_Table1, caption = "Duplicate Primary Keys. Primary Keys MUST be unique!")}`
+
+`r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
+
+`r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
+
+`r if (nrow(ShellPest_nulls) > 0) {kable(ShellPest_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+<h2>Data Errors:</h2>
+
+<h3>~ ~ ~ ~ ~ ~ ~ Unexpected null values ~ ~ ~ ~ ~ ~ ~</h3>
+
+The following fields are expected to either contain data or have a
+comment explaining why the data is missing.
+
+<h4>--- Shell Pest ---</h4>
+
+<p2>`r Mess_null_ShellPest`</p2>
+
+`r if (nrow(null_ShellPest) > 0) {kable(null_ShellPest, caption = "Null Sample Event Data. Comment Required for all Null values")}`
+
+<h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
+
+Value ranges below represent historically high or low values. Actual
+values can be outside that range and may or may not require a Comment.
+
+<h4>--- Shell Pest ---</h4>
+
+<p2>`r MessShellPest_ranges`</p2>
+
+`r if (nrow(ShellPest_range1) > 0) {kable(ShellPest_range1, caption = "Out of range Shell Pest data. Expected range for TotalArea is 50% to 90% of MaxArea. Expected range for TotalHeight is 60% to 140% of ShellHeight. Expected range for ShellLength is 60% to 140% of ShellLength. Comment required for out of range values.")}`
+
+`r if (nrow(ShellPest_range2) > 0) {kable(ShellPest_range2, caption = "Out of range Shell Pest data. Expected range for ClionaArea is 0 to 95% of TotalArea. Expected range for PolydoraArea is 0 to 95% of TotalArea. Expected range for ClamCount is 0 to 10. Expected range for ClamAverageDiameter is 0 to 6.0 mm. Comment required for out of range values.")}`
+
+<h2>SQL Code:</h2>
+
+If there are no Database Errors detected and all Data Errors have been
+addressed, you may use the following SQL code to Complete these data.
+This code will update the DataStatus, CompletedBy, and DateCompleted
+fields in the hsdb schema.
+
+<p2>It is recommended that you test this query in your local instance
+BEFORE executing it on fwcsqlint.</p2>
+
+\~\~\~\~ Note to self: The bulk of this code may be better as a Stored
+Procedure. Then the SQL Code here would be:\
+EXEC sp_CompleteShellPest_hsdb \'`r EstuaryCode`\', \'`r CheckStart`\',
+\'`r CheckEnd`\', \'`r DataManager`\';
+
+\~\~\~\~ SQL code with comments in un-run chunk at end.
+
+\~\~\~\~ End note
+
+UPDATE hsdb.ShellPest SET DataStatus = \'Completed\', CompletedBy =
+\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
+WHERE SUBSTRING(SampleEventID, 1, 2) = \'`r EstuaryCode`\' AND
+CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \> \'`r CheckStart`\' AND
+CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \< \'`r CheckEnd`\' 
+
+`r knit_exit()`
+
+```{sql SQL code, eval=FALSE, include=FALSE}
+
+-- Query the ShellPest table
+
+UPDATE hsdb.ShellPest 
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
+WHERE SUBSTRING(SampleEventID, 1, 2) = '`EstuaryCode`'
+AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) > '`r CheckStart`' 
+AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) < '`r CheckEnd`';
+```
