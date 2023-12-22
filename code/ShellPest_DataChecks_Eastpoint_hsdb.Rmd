@@ -21,13 +21,9 @@ library(odbc)
 library(DBI)
 library(dbplyr)
 library(lubridate)
-#library(rMR) DO saturation calculation
-library(scales) # Not sure if this library is needed or not
-#library(geosphere) SampleEvent distance calculations
 library(knitr)
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-
 ```
 
 ```{css}
@@ -82,7 +78,6 @@ hsdbShellPest <- tbl(con,in_schema("hsdb", "ShellPest")) %>%
   collect() 
 
 DBI::dbDisconnect(con)
-
 ```
 
 ```{r DataFilters}
@@ -107,7 +102,6 @@ ShellPest1 <- hsdbShellPest %>%
 
 TripInfo1 <- select(ShellPest1, TripDate) %>%
   distinct()
-  
 ```
 
 ```{r DatabaseErrors}
@@ -160,7 +154,7 @@ ShellPest_nulls <- filter(ShellPest1, is.na(ShellPestID), is.na(OysterID) | is.n
 
 # Remove unneeded data frames and values
 
-#rm(dboFixedLocations, dest, FixedLocations1, hsdbCI, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dboFixedLocations, dest, FixedLocations1, hsdbCI, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
@@ -211,7 +205,6 @@ if (nrow(ShellPest_range1) > 0 | nrow(ShellPest_range2) > 0) {
 } else {
   MessShellPest_ranges = "Congratulations! No out of range values detected."
 }
-
 ```
 
 These data checks were run on trips occurring between
@@ -295,5 +288,4 @@ SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '
 WHERE SUBSTRING(SampleEventID, 1, 2) = '`EstuaryCode`'
 AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) > '`r CheckStart`' 
 AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) < '`r CheckEnd`';
-
 ```
