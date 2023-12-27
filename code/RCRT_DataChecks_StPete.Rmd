@@ -324,7 +324,7 @@ null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(
   # Out of range values
 Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
-Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 35) %>%
+Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
 DO_range <- SampleEventWQ1 %>% 
   mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
