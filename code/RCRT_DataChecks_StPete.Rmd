@@ -360,7 +360,7 @@ Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
 # Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
 #   select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate, Comments)
 
-Spat_range <- filter(Recruitment1, NumBottom > 50) %>%
+Spat_range <- filter(Recruitment1, NumBottom > 200) %>%
   select(TripDate, DeployedDate, StationNumber, ShellReplicate, ShellPosition, NumBottom, Comments)
   
 if (nrow(null_WQs) > 0) {
