@@ -139,7 +139,8 @@ Recruitment1 <- dboRecruitment %>%
          NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, Recruitment1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber, ShellID)
+  arrange(TripDate, StationNumber, ShellID) %>%
+  filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
 
 hsdbTripInfo <- hsdbTripInfo %>% 
   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Recruitment")  %>%
