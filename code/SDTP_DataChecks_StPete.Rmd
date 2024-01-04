@@ -324,7 +324,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 
 ## Water Quality #
   # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>%
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>% filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), SampleEventWQ1$Comments)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
 
   # Out of range values
@@ -366,11 +366,11 @@ Days_range <- filter(SedimentTrap1, NumDays < 21 | NumDays > 36) %>%
 # Days_range <- filter(SedimentTrap1, NumDays < 21 | NumDays > 36) %>%
 #   select(TripDate, DeployedDate, NumDays, StationNumber, CupSampleID, Comments)
 
-Tare_ranges <- filter(SedimentTrap1, FilterTareWeight < 0 | FilterTareWeight > 2.00 | PanTareWeight < 0 | PanTareWeight > 400.00) %>%
+Tare_ranges <- filter(SedimentTrap1, FilterTareWeight < 0 | FilterTareWeight > 3.00 | PanTareWeight < 0 | PanTareWeight > 400.00) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, PanTareWeight, Comments)
 Dry_ranges <- filter(SedimentTrap1, FilterDryWeight < FilterTareWeight | FilterDryWeight > 10 | PanDryWeight < PanTareWeight | PanDryWeight > 600) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, FilterDryWeight, PanTareWeight, PanDryWeight, Comments)
-Biota_ranges <- filter(SedimentTrap1, NumDrills < 0 | NumDrills > 5 | NumCrabs < 0 | NumCrabs > 2 | NumHermitCrabs < 0 | NumHermitCrabs > 20 | NumFish < 0 | NumFish > 2 | NumOtherBiota < 0 | NumOtherBiota > 1) %>%
+Biota_ranges <- filter(SedimentTrap1, NumDrills < 0 | NumDrills > 8 | NumCrabs < 0 | NumCrabs > 5 | NumHermitCrabs < 0 | NumHermitCrabs > 30 | NumFish < 0 | NumFish > 3 | NumOtherBiota < 0 | NumOtherBiota > 10) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, NumDrills, NumCrabs, NumHermitCrabs, NumFish, NumOtherBiota, Comments)
 
 if (nrow(null_WQs) > 0) {
@@ -457,7 +457,7 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
 
-`r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
+`r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 38.0 ppt. Comment required for out of range values.")}`
 
 `r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range dissolved oxygen data. Expected range is 50% to 120% saturation. . Comment required for out of range values.")}`
 
@@ -477,11 +477,11 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Comment required for out of range values.")}`
 
-`r if (nrow(Tare_ranges) > 0) {kable(Tare_ranges, caption = "Out of range Tare data. Expected range for filters is 0 to 2.00 grams. Expected range for pans is 0 to 400.00 grams. Comment required for out of range values.")}`
+`r if (nrow(Tare_ranges) > 0) {kable(Tare_ranges, caption = "Out of range Tare data. Expected range for filters is 0 to 3.00 grams. Expected range for pans is 0 to 400.00 grams. Comment required for out of range values.")}`
 
 `r if (nrow(Dry_ranges) > 0) {kable(Dry_ranges, caption = "Out of range Dry data. Expected range for dry filters is FilterTare to 10.00 grams. Expected range for dry pans is PanTare to 600.00 grams. Comment required for out of range values.")}`
 
-`r if (nrow(Biota_ranges) > 0) {kable(Biota_ranges, caption = "Out of range Biota data. Expected range for Drills is 0 to 5. Expected range for Crabs is 0 to 2. Expected range for Hermit Crabs is 0 to 20. Expected range for Fish is 0 to 2. Expected range for OtherBiota is 0 to 1. Comment required for out of range values.")}`
+`r if (nrow(Biota_ranges) > 0) {kable(Biota_ranges, caption = "Out of range Biota data. Expected range for Drills is 0 to 8. Expected range for Crabs is 0 to 5. Expected range for Hermit Crabs is 0 to 30. Expected range for Fish is 0 to 3. Expected range for OtherBiota is 0 to 10. Comment required for out of range values.")}`
 
 <h2>SQL Code:</h2>
 
