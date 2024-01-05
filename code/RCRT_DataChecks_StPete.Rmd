@@ -580,7 +580,10 @@ INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
 
 DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
 
-INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
+INSERT INTO hsdb.SampleEvent
+(SampleEventID,TripID,FixedLocationID,LatitudeDec,LongitudeDec,LatDec,LatMin,LongDec,LongMin,NumDrills,HarvestStatus,DataStatus,DateEntered,EnteredBy,DateProofed,ProofedBy,DateCompleted, CompletedBy,Comments,AdminNotes) 
+SELECT SampleEventID,TripID,FixedLocationID,LatitudeDec,LongitudeDec,LatDec,LatMin,LongDec,LongMin,NumDrills,HarvestStatus,DataStatus,DateEntered,EnteredBy,DateProofed,ProofedBy,DateCompleted, CompletedBy,Comments,AdminNotes 
+FROM SampleEvent WHERE DataStatus = 'Completed';
 
 DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
 
