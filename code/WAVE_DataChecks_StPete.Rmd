@@ -1,5 +1,5 @@
 ---
-title: "Wave Sphere Data Checks"
+title: "Wave Motion Data Checks"
 output:
   html_document:
 knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encoding = encoding, output_file = paste0(substr(inputFile, 1, nchar(inputFile)-4), "_", Sys.Date(), '.html')) })
@@ -8,10 +8,10 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-10-31")  # End Date for Checks
+CheckEnd <- as.Date("2023-07-31")  # End Date for Checks
 EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "OystersEL_231201"
+Database = "OystersEL_240111"
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -91,10 +91,10 @@ hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
 dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
   collect() 
 
-hsdbRecruitment <- tbl(con,in_schema("hsdb", "Recruitment")) %>%
+hsdbWave <- tbl(con,in_schema("hsdb", "Wave")) %>%
   collect() 
 
-dboRecruitment <- tbl(con,in_schema("dbo", "Recruitment")) %>%
+dboWave <- tbl(con,in_schema("dbo", "Wave")) %>%
   collect()
 
 DBI::dbDisconnect(con)
@@ -102,7 +102,7 @@ DBI::dbDisconnect(con)
 ```
 
 ```{r DataFilters}
-# Filter data frames so that only data collected from Recruitment trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+# Filter data frames so that only data collected from Wave motion trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
 FixedLocations1 <- dboFixedLocations %>% 
   mutate(StationNumber = as.numeric(StationNumber)) %>% 
   select(FixedLocationID,
@@ -112,7 +112,7 @@ FixedLocations1 <- dboFixedLocations %>%
   distinct()
           
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Recruitment" & DataStatus == "Proofed") %>%
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Wave Motion" & DataStatus == "Proofed") %>%
   arrange(TripID)
 
 TripInfo2 <- TripInfo1 %>%
@@ -122,43 +122,42 @@ TripInfo2 <- TripInfo1 %>%
 SampleEvent1 <- dboSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "WAVE" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber)
 
 SampleEventWQ1 <- dboSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "WAVE" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
-Recruitment1 <- dboRecruitment %>% 
+Wave1 <- dboWave %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(ShellID, 19, 22),
-         NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
-  left_join(FixedLocations1, Recruitment1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber, ShellID) %>%
-  filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
+         FixedLocationID = substring(WaveID, 19, 22)) %>%
+         #NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "WAVE" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, Wave1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, WaveID) 
 
 hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Recruitment")  %>%
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Wave Motion")  %>%
   arrange(TripID)
 
 hsdbSampleEvent <- hsdbSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "WAVE") %>%
   arrange(TripDate)
 
 hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "WAVE") %>%
   arrange(TripDate)
 
-hsdbRecruitment <- hsdbRecruitment %>% 
+hsdbWave <- hsdbWave %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "WAVE") %>%
   arrange(TripDate)
 
 ```
@@ -190,9 +189,9 @@ if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
     select(schema, Table, PrimaryKey)
 }
 
-if (nrow(Recruitment1[duplicated(Recruitment1$ShellID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Recruitment", Recruitment1[duplicated(Recruitment1$ShellID), ])) %>% 
-    mutate(PrimaryKey = ShellID) %>%
+if (nrow(Wave1[duplicated(Wave1$WaveID), ]) > 0) {
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Wave", Wave1[duplicated(Wave1$WaveID), ])) %>% 
+    mutate(PrimaryKey = WaveID) %>%
     select(schema, Table, PrimaryKey)
 }
 
