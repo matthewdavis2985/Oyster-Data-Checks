@@ -8,10 +8,10 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-07-31")  # End Date for Checks
-EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckEnd <- as.Date("2023-12-31")  # End Date for Checks
+EstuaryCode = "CR"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "OystersEL_240111"
+Database = "OystersEL_230112"
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -198,9 +198,9 @@ if (nrow(Wave1[duplicated(Wave1$WaveID), ]) > 0) {
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are unique in the hsdb schema
 ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Recruitment1$ShellID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbRecruitment$ShellID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "Recruitment")
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Wave1$WaveID)
+dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbWave$WaveID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "Wave Motion")
 
 # Loop through values
 for (i in seq_along(sorc)) {
@@ -222,9 +222,9 @@ rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Tablex)
 # Ensure the Foreign Keys are not orphans
 # Create an empty data frame ERR_Table
 ERR_Table2 <- data.frame()
-sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
+sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Wave1$SampleEventID)
 dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
-tabl <- list("SampleEvent", "SampleEventWQ", "Recruitment")
+tabl <- list("SampleEvent", "SampleEventWQ", "Wave")
 
 # Loop through SampleEvent$TripID values
 for (i in seq_along(sorc)) {
@@ -243,7 +243,7 @@ ERR_Table2 <- distinct(ERR_Table2)
 # Ensure the Primary Keys are not childless
 ERR_Table3 <- data.frame()
 sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
-dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
+dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Wave1$SampleEventID)
 tabl <- list("TripInfo", "SampleEvent", "SampleEvent")
 
 # Loop through SampleEvent$TripID values
@@ -260,9 +260,9 @@ ERR_Table3 <- distinct(ERR_Table3)
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
 ERR_Table4 <- data.frame()
-pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Recruitment1$ShellID)
-fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
-tabl <- list("SampleEvent", "SampleEventWQ", "Recruitment")
+pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Wave1$WaveID)
+fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Wave1$SampleEventID)
+tabl <- list("SampleEvent", "SampleEventWQ", "Wave")
 numb <- list(17, 24, 24)
 
 for (i in seq_along(pkid)) {
@@ -286,16 +286,16 @@ SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) |
 SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
   select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
 
-Recruitment_nulls <- filter(Recruitment1, is.na(ShellID) | is.na(SampleEventID) | is.na(DeployedDate) | is.na(ShellReplicate) | is.na(ShellPosition) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(ShellID, SampleEventID, DeployedDate, ShellReplicate, ShellPosition, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+Wave_nulls <- filter(Wave1, is.na(WaveID) | is.na(SampleEventID) | is.na(InitialWeight) | is.na(WetWeight) | is.na(DryWeight) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+  select(WaveID, SampleEventID, InitialWeight, WetWeight, DryWeight, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboRecruitment, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbRecruitment, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dboFixedLocations, dboWave, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbWave, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
-if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(Recruitment_nulls) > 0) {
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(Wave_nulls) > 0) {
   MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
   MessERR_Tables2 = ""
 } else {
@@ -344,24 +344,21 @@ TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 
 TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
 
-## Recruitment #
+## Wave #
   # Unexpected Null values
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
-Recruitment1$Comments <- ifelse(nchar(Recruitment1$Comments) == 0, NA, Recruitment1$Comments) 
-null_Recs <- filter(Recruitment1, is.na(NumBottom) & !is.na(Comments) & (ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11)) %>%
-  select(TripDate, DeployedDate, StationNumber, ShellReplicate, ShellPosition, NumBottom, Comments)
+Wave1$Comments <- ifelse(nchar(Wave1$Comments) == 0, NA, Wave1$Comments) 
+null_Recs <- filter(Wave1, (is.na(WetWeight) | is.na(DryWeight)) & !is.na(Comments)) %>%
+  select(TripDate, StationNumber, WaveID, InitialWeight, WetWeight, DryWeight, Comments)
 
   # Out of range values
-Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
-  select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate, Comments) %>%
-  distinct()
-# Code above reduces the number of records outside of the range by showing only distinct. If you need to view ALL records affected, substitute with the commented out code below.
-# Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
-#   select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate, Comments)
-
-Spat_range <- filter(Recruitment1, NumBottom > 200) %>%
-  select(TripDate, DeployedDate, StationNumber, ShellReplicate, ShellPosition, NumBottom, Comments)
+Initial_range <- filter(Wave1, InitialWeight < 50 | InitialWeight > 230) %>%
+  select(TripDate, StationNumber,  WaveID, InitialWeight, WetWeight, DryWeight, Comments)
+Wet_range <- filter(Wave1, WetWeight <= 0 & WetWeight > InitialWeight) %>%
+  select(TripDate, StationNumber,  WaveID, InitialWeight, WetWeight, DryWeight, Comments)
+Dry_range <- filter(Wave1, DryWeight > WetWeight) %>%
+  select(TripDate, StationNumber,  WaveID, InitialWeight, WetWeight, DryWeight, Comments)
   
 if (nrow(null_WQs) > 0) {
   Mess_null_WQs = ""
@@ -381,7 +378,7 @@ if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_ra
   MessWQ_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(Days_range) > 0 & nrow(Spat_range) > 0) {
+if (nrow(Initial_range) > 0 | nrow(Wet_range) > 0  | nrow(Dry_range) > 0) {
   MessRec_ranges = ""
 } else {
   MessRec_ranges = "Congratulations! No out of range values detected."
@@ -413,7 +410,7 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(Recruitment_nulls) > 0) {kable(Recruitment_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(Wave_nulls) > 0) {kable(Wave_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
 <h2>Data Errors:</h2>
 
@@ -428,16 +425,17 @@ comment explaining why the data is missing.
 
 `r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment Required for all Null values")}`
 
-<h4>--- Recruitment ---</h4>
+<h4>--- Wave Motion ---</h4>
 
 <p2>`r Mess_null_Recs`</p2>
 
-`r if (nrow(null_Recs) > 0) {kable(null_Recs, caption = "Null Recruitment Data. Comment Required for all Null values")}`
+`r if (nrow(null_Recs) > 0) {kable(null_Recs, caption = "Null Wave Motion Data. Comment Required for all Null values")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
 Value ranges below represent historically high or low values. Actual
 values can be outside that range and may or may not require a Comment.
+Weights ranges are based on logical dissolution expectations and values outside of the range require a Comment.
 
 <h4>--- Water Quality ---</h4>
 
@@ -459,13 +457,15 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
 
-<h4>--- Recruitment ---</h4>
+<h4>--- Wave Motion ---</h4>
 
 <p2>`r MessRec_ranges`</p2>
 
-`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Comment required for out of range values.")}`
+`r if (nrow(Initial_range) > 0) {kable(Initial_range, caption = "Out of range initial weight. Expected range is 50g to 230g. Comment required for out of range values.")}`
 
-`r if (nrow(Spat_range) > 0) {kable(Spat_range, caption = "Out of range Spat count data. Expected range is 0 to 50 spat. Comment required for out of range values.")}`
+`r if (nrow(Wet_range) > 0) {kable(Wet_range, caption = "Out of range wet weight. Expected range is 0 to Initial weight. Comment required for out of range values.")}`
+
+`r if (nrow(Dry_range) > 0) {kable(Dry_range, caption = "Out of range dry weight. Expected range is less than the Wet weight. Comment required for out of range values.")}`
 
 <h2>SQL Code:</h2>
 
@@ -480,7 +480,7 @@ BEFORE executing it on fwcsqlint.</p2>
 
 \~\~\~\~ Note to self: The bulk of this code may be better as a Stored
 Procedure. Then the SQL Code here would be:\
-EXEC sp_CompleteRecruitment \'`r EstuaryCode`\', \'`r CheckStart`\',
+EXEC sp_CompleteWave \'`r EstuaryCode`\', \'`r CheckStart`\',
 \'`r CheckEnd`\', \'`r DataManager`\';
 
 \~\~\~\~ SQL code with comments in un-run chunk at end.
@@ -494,7 +494,7 @@ CREATE TABLE #ValidTrips ( TripID VARCHAR(50) );
 
 INSERT INTO #ValidTrips (TripID) SELECT TripID FROM TripInfo WHERE
 TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
-DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`RCRT%\';
+DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`WAVE%\';
 
 UPDATE TripInfo SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
@@ -509,7 +509,7 @@ UPDATE SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
-UPDATE Recruitment SET DataStatus = \'Completed\', CompletedBy =
+UPDATE Wave SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
@@ -529,10 +529,10 @@ DataStatus = \'Completed\';
 
 DELETE FROM dbo.SampleEventWQ WHERE DataStatus = \'Completed\';
 
-INSERT INTO hsdb.Recruitment SELECT \* FROM Recruitment WHERE DataStatus
+INSERT INTO hsdb.Wave SELECT \* FROM Wave WHERE DataStatus
 = \'Completed\';
 
-DELETE FROM dbo.Recruitment WHERE DataStatus = \'Completed\';
+DELETE FROM dbo.Wave WHERE DataStatus = \'Completed\';
 
 `r knit_exit()`
 
@@ -552,7 +552,7 @@ INSERT INTO #ValidTrips (TripID)
 SELECT TripID
 FROM TripInfo
 WHERE TripDate > '`r CheckStart`' AND TripDate < '`r CheckEnd`'
-AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`RCRT%';
+AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`WAVE%';
 
 -- Query the TripInfo table using the temporary table
 UPDATE TripInfo 
@@ -569,8 +569,8 @@ UPDATE SampleEventWQ
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
--- Query the Recruitment table using the temporary table
-UPDATE Recruitment 
+-- Query the Wave table using the temporary table
+UPDATE Wave 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
@@ -590,9 +590,9 @@ INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'C
 
 DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
 
-INSERT INTO hsdb.Recruitment SELECT * FROM Recruitment WHERE DataStatus = 'Completed';
+INSERT INTO hsdb.Wave SELECT * FROM Wave WHERE DataStatus = 'Completed';
 
-DELETE FROM dbo.Recruitment WHERE DataStatus = 'Completed';
+DELETE FROM dbo.Wave WHERE DataStatus = 'Completed';
 
 
 ```
