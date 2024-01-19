@@ -8,10 +8,10 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-10-31")  # End Date for Checks
+CheckEnd <- as.Date("2023-12-31")  # End Date for Checks
 EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "OystersEL_231201"
+Database = "OystersEL_240119"
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -498,20 +498,20 @@ TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
 DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`RCRT%\';
 
 UPDATE TripInfo SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
+\'`r DataManager`\', DateCompleted = \'`r ceiling_date(Sys.Date(), "month") - 1`\'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 UPDATE SampleEvent SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d.%B.%Y")`\'
+\'`r DataManager`\', DateCompleted = \'`r ceiling_date(Sys.Date(), "month") - 1`\'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 UPDATE SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
+\'`r DataManager`\', DateCompleted = \'`r ceiling_date(Sys.Date(), "month") - 1`\'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
 UPDATE Recruitment SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
+\'`r DataManager`\', DateCompleted = \'`r ceiling_date(Sys.Date(), "month") - 1`\'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
 TripID IN (SELECT TripID FROM #ValidTrips));
 
@@ -557,22 +557,22 @@ AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`RCRT%';
 
 -- Query the TripInfo table using the temporary table
 UPDATE TripInfo 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r ceiling_date(Sys.Date(), "month") - 1`'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 -- Query the SampleEvent table using the temporary table
 UPDATE SampleEvent 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d.%B.%Y")`'
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r ceiling_date(Sys.Date(), "month") - 1`'
 WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 -- Query the SampleEventWQ table using the temporary table
 UPDATE SampleEventWQ 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r ceiling_date(Sys.Date(), "month") - 1`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
 -- Query the Recruitment table using the temporary table
 UPDATE Recruitment 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
+SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r ceiling_date(Sys.Date(), "month") - 1`'
 WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
 -- Insert the Completed data into hsdb, and DELETE FROM dbo
