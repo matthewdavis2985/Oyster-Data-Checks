@@ -685,7 +685,7 @@ BEGIN
 	SELECT TripID
 	FROM hsdb.TripInfo
 	WHERE TripDate > @CheckStart AND TripDate < @CheckEnd
-	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'RCRT%');
+	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'SHBG%');
 
 	-- Query the TripInfo table using the temporary table
 	UPDATE hsdb.TripInfo 
