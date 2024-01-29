@@ -739,16 +739,29 @@ BEGIN
   
   DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
   
-  INSERT INTO hsdb.ConditionIndex SELECT * FROM ConditionIndex WHERE DataStatus = 'Completed';
+  INSERT INTO hsdb.ConditionIndex 
+  (OysterID, SampleEventID, ShellHeight, ShellLength, ShellWidth, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes)
+  SELECT 
+  OysterID, SampleEventID, ShellHeight, ShellLength, ShellWidth, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes
+  FROM ConditionIndex WHERE DataStatus = 'Completed';
   
   DELETE FROM dbo.ConditionIndex WHERE DataStatus = 'Completed';
   
-  INSERT INTO hsdb.Dermo SELECT * FROM Dermo WHERE DataStatus = 'Completed';
+  INSERT INTO hsdb.Dermo 
+  (OysterID, SampleEventID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments,	AdminNotes)
+  SELECT 
+  OysterID, SampleEventID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes
+  FROM Dermo WHERE DataStatus = 'Completed';
   
   DELETE FROM dbo.Dermo WHERE DataStatus = 'Completed';
   
-  INSERT INTO hsdb.Repro SELECT * FROM Repro WHERE DataStatus = 'Completed';
+  INSERT INTO hsdb.Repro 
+  (OysterID, SampleEventID, Sex, ReproStage, Parasite, BadSlide, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes)
+  SELECT OysterID, SampleEventID, Sex, ReproStage, Parasite, BadSlide, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes
+  FROM Repro WHERE DataStatus = 'Completed';
   
   DELETE FROM dbo.Repro WHERE DataStatus = 'Completed';
+  
+END
 
 ```
