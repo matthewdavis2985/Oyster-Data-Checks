@@ -506,7 +506,7 @@ EXECUTE [dbo].[spChecksSediment]
 -- To do so, copy and paste this code VERBATIM into SSMS
 -- DO NOT RUN THIS CODE WITH R --
 
-CREATE PROCEDURE [hsdb].[spChecksSediment](
+CREATE PROCEDURE [dbo].[spChecksSediment](
 	@CheckStart AS DATE,
 	@CheckEnd AS DATE,
 	@EstuaryCode AS VARCHAR(2),

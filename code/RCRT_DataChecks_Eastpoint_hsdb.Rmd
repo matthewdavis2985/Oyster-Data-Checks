@@ -487,7 +487,9 @@ BEGIN
 	SET @CompletedDate = cast(getDate() as date);
 
 	IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
+	BEGIN
     DROP TABLE #ValidTrips;
+  END
 
 	CREATE TABLE #ValidTrips (
 		TripID VARCHAR(50)

@@ -477,7 +477,7 @@ data from the dbo schema.
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
-EXECUTE hsdb.spChecksRecruitment
+EXECUTE dbo.spChecksRecruitment
 	@CheckStart = \'`r CheckStart`\',
 	@CheckEnd = \'`r CheckEnd`\',
 	@EstuaryCode = \'`r EstuaryCode`\',
