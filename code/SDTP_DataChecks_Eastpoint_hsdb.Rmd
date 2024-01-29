@@ -478,80 +478,65 @@ fields in the hsdb schema.
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
-\~\~\~\~ Note to self: The bulk of this code may be better as a Stored
-Procedure. Then the SQL Code here would be:\
-EXEC sp_CompleteSedimentTrap_hsdb \'`r EstuaryCode`\', \'`r CheckStart`\',
-\'`r CheckEnd`\', \'`r DataManager`\';
-
-\~\~\~\~ SQL code with comments in un-run chunk at end.
-
-\~\~\~\~ End note
-
-IF OBJECT_ID(\'tempdb..#ValidTrips\') IS NOT NULL BEGIN DROP TABLE
-#ValidTrips; END
-
-CREATE TABLE #ValidTrips ( TripID VARCHAR(50) );
-
-INSERT INTO #ValidTrips (TripID) SELECT TripID FROM hsdb.TripInfo WHERE
-TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
-DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`SDTP%\';
-
-UPDATE hsdb.TripInfo SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%Y-%m-%d")`\'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
-UPDATE hsdb.SampleEvent SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%Y-%m-%d")`\'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
-UPDATE hsdb.SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%Y-%m-%d")`\'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
-TripID IN (SELECT TripID FROM #ValidTrips));
-
-UPDATE hsdb.SedimentTrap SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%%Y-%m-%d")`\'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
-TripID IN (SELECT TripID FROM #ValidTrips));
+EXECUTE [hsdb].[spChecksSediment]
+	@CheckStart = \'`r CheckStart`\',
+	@CheckEnd = \'`r CheckEnd`\',
+	@EstuaryCode = \'`r EstuaryCode`\',
+	@DataManager = \'`r DataManager`\';
 
 `r knit_exit()`
 
 ```{sql SQL code, eval=FALSE, include=FALSE}
+--- This code creates a stored procedure in the database. 
+-- To do so, copy and paste this code VERBATIM into SSMS
+-- DO NOT RUN THIS CODE WITH R --
 
--- Check that there is not already a temporary table to store valid TripIDs. If there is, DELETE it and create a clean temporary table
-IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
+CREATE PROCEDURE [hsdb].[spChecksSediment](
+	@CheckStart AS DATE,
+	@CheckEnd AS DATE,
+	@EstuaryCode AS VARCHAR(2),
+	@DataManager AS VARCHAR(max)
+	)
+AS
 BEGIN
+	DECLARE @CompletedDate DATE;
+	SET @CompletedDate = cast(getDate() as date);
+
+	IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
+	BEGIN
     DROP TABLE #ValidTrips;
+  END
+
+	CREATE TABLE #ValidTrips (
+		TripID VARCHAR(50)
+	);
+
+	INSERT INTO #ValidTrips (TripID)
+	SELECT TripID
+	FROM hsdb.TripInfo
+	WHERE TripDate > @CheckStart AND TripDate < @CheckEnd
+	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'SDTP%');
+
+	-- Query the TripInfo table using the temporary table
+	UPDATE hsdb.TripInfo 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+	-- Query the SampleEvent table using the temporary table
+	UPDATE hsdb.SampleEvent 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+	-- Query the SampleEventWQ table using the temporary table
+	UPDATE hsdb.SampleEventWQ 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
+	-- Query the SedimentTrap table using the temporary table
+	UPDATE hsdb.SedimentTrap 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
 END
-
-CREATE TABLE #ValidTrips (
-    TripID VARCHAR(50)
-);
-
-INSERT INTO #ValidTrips (TripID)
-SELECT TripID
-FROM hsdb.TripInfo
-WHERE TripDate > '`r CheckStart`' AND TripDate < '`r CheckEnd`'
-AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`SDTP%';
-
--- Query the TripInfo table using the temporary table
-UPDATE hsdb.TripInfo 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%Y-%m-%d")`'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
--- Query the SampleEvent table using the temporary table
-UPDATE hsdb.SampleEvent 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%Y-%m-%d")`'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
--- Query the SampleEventWQ table using the temporary table
-UPDATE hsdb.SampleEventWQ 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%Y-%m-%d")`'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
-
--- Query the SedimentTrap table using the temporary table
-UPDATE hsdb.SedimentTrap 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%Y-%m-%d")`'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
 ```
