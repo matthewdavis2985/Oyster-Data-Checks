@@ -479,61 +479,11 @@ data from the dbo schema.
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
-\~\~\~\~ Note to self: The bulk of this code may be better as a Stored
-Procedure. Then the SQL Code here would be:\
-EXEC sp_CompleteRecruitment \'`r EstuaryCode`\', \'`r CheckStart`\',
-\'`r CheckEnd`\', \'`r DataManager`\';
-
-\~\~\~\~ SQL code with comments in un-run chunk at end.
-
-\~\~\~\~ End note
-
-IF OBJECT_ID(\'tempdb..#ValidTrips\') IS NOT NULL BEGIN DROP TABLE
-#ValidTrips; END
-
-CREATE TABLE #ValidTrips ( TripID VARCHAR(50) );
-
-INSERT INTO #ValidTrips (TripID) SELECT TripID FROM TripInfo WHERE
-TripDate \> \'`r CheckStart`\' AND TripDate \< \'`r CheckEnd`\' AND
-DataStatus = \'Proofed\' AND TripID like \'`r EstuaryCode`RCRT%\';
-
-UPDATE TripInfo SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r ceiling_date(Sys.Date(), "month") - 1`\'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
-UPDATE SampleEvent SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r ceiling_date(Sys.Date(), "month") - 1`\'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
-UPDATE SampleEventWQ SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r ceiling_date(Sys.Date(), "month") - 1`\'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
-TripID IN (SELECT TripID FROM #ValidTrips));
-
-UPDATE Recruitment SET DataStatus = \'Completed\', CompletedBy =
-\'`r DataManager`\', DateCompleted = \'`r ceiling_date(Sys.Date(), "month") - 1`\'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE
-TripID IN (SELECT TripID FROM #ValidTrips));
-
-INSERT INTO hsdb.TripInfo SELECT \* FROM TripInfo WHERE DataStatus =
-\'Completed\';
-
-DELETE FROM dbo.TripInfo WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SampleEvent SELECT \* FROM SampleEvent WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.SampleEvent WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.SampleEventWQ SELECT \* FROM SampleEventWQ WHERE
-DataStatus = \'Completed\';
-
-DELETE FROM dbo.SampleEventWQ WHERE DataStatus = \'Completed\';
-
-INSERT INTO hsdb.Recruitment SELECT \* FROM Recruitment WHERE DataStatus
-= \'Completed\';
-
-DELETE FROM dbo.Recruitment WHERE DataStatus = \'Completed\';
+EXECUTE [dbo].[spChecksRecruitment]
+	@CheckStart = \'`r CheckStart`\',
+	@CheckEnd = \'`r CheckEnd`\',
+	@EstuaryCode = \'`r EstuaryCode`\',
+	@DataManager = \'`r DataManager`\';
 
 `r knit_exit()`
 
