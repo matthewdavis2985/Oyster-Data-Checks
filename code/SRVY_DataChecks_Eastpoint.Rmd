@@ -425,6 +425,7 @@ SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the numb
   left_join(initialSHmeasurement, by = c("QuadratID")) %>%
   select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) 
 
+
 Over50Measured <- SHmeasures %>%
   filter(NumMeasured > 50) %>%
   mutate(ErrorColumn = "Over 50 measured")
