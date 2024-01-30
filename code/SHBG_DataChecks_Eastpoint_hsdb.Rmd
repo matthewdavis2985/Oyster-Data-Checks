@@ -298,7 +298,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 
 ## SampleEvent #
   # Unexpected Null values
-null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec) | is.na(LatDec) | is.na(LatMin) | is.na(LongDec) | is.na(LongMin)) %>%
+null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec)) %>%
   select(SampleEventID, LatitudeDec, LongitudeDec, LatDec, LatMin, LongDec, LongMin)
 
   # Out of range values
