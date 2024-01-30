@@ -112,7 +112,7 @@ FixedLocations1 <- dboFixedLocations %>%
   distinct()
           
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Recruitment" & DataStatus == "Proofed") %>%
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment" & DataStatus == "Proofed") %>%
   arrange(TripID)
 
 TripInfo2 <- TripInfo1 %>%
@@ -122,14 +122,14 @@ TripInfo2 <- TripInfo1 %>%
 SampleEvent1 <- dboSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber)
 
 SampleEventWQ1 <- dboSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
@@ -137,27 +137,27 @@ Recruitment1 <- dboRecruitment %>%
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(ShellID, 19, 22),
          NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, Recruitment1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, ShellID)
 
 hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & TripType == "Recruitment")  %>%
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment")  %>%
   arrange(TripID)
 
 hsdbSampleEvent <- hsdbSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
   arrange(TripDate)
 
 hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventWQID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT") %>%
   arrange(TripDate)
 
 hsdbRecruitment <- hsdbRecruitment %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
   arrange(TripDate)
 
 ```
@@ -514,7 +514,7 @@ BEGIN
 	INSERT INTO #ValidTrips (TripID)
 	SELECT TripID
 	FROM TripInfo
-	WHERE TripDate > @CheckStart AND TripDate < @CheckEnd
+	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
 	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'RCRT%');
 
 	-- Query the TripInfo table using the temporary table

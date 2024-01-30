@@ -91,13 +91,13 @@ FixedLocations1 <- dboFixedLocations %>%
 hsdbCI <- hsdbCI %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Completed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Completed") %>%
   arrange(TripDate)
 
 ShellPest1 <- hsdbShellPest %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate < CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, ShellPest1, by = c("FixedLocationID")) %>%
   arrange(TripDate)
 
@@ -275,8 +275,8 @@ EXEC sp_CompleteShellPest_hsdb \'`r EstuaryCode`\', \'`r CheckStart`\',
 UPDATE hsdb.ShellPest SET DataStatus = \'Completed\', CompletedBy =
 \'`r DataManager`\', DateCompleted = \'`r format(Sys.Date(), "%d-%B-%Y")`\'
 WHERE SUBSTRING(SampleEventID, 1, 2) = \'`r EstuaryCode`\' AND
-CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \> \'`r CheckStart`\' AND
-CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \< \'`r CheckEnd`\' 
+CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \>= \'`r CheckStart`\' AND
+CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \<= \'`r CheckEnd`\' 
 
 `r knit_exit()`
 
@@ -287,6 +287,6 @@ CAST(SUBSTRING(SampleEventID, 8, 8) AS date) \< \'`r CheckEnd`\'
 UPDATE hsdb.ShellPest 
 SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r format(Sys.Date(), "%d-%B-%Y")`'
 WHERE SUBSTRING(SampleEventID, 1, 2) = '`EstuaryCode`'
-AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) > '`r CheckStart`' 
-AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) < '`r CheckEnd`';
+AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) >= '`r CheckStart`' 
+AND CAST(SUBSTRING(SampleEventID, 8, 8) AS date) <= '`r CheckEnd`';
 ```
