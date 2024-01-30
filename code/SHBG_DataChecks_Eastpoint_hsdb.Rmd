@@ -6,11 +6,12 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-08-28")  # End Date for Checks
+CheckStart <- as.Date("2022-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2022-08-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20231019"
+Database = "OysterLocalMD20240123"
+Server = "localhost\\MATTLOCALSQL"
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -65,7 +66,7 @@ font-weight: bold;
 # Connect to Local database server and pull all necessary data, then close connection 
 con <- dbConnect(odbc(),
                     Driver = "SQL Server", 
-                    Server = "localhost\\MATTLOCALSQL",
+                    Server = Server,
                     Database = Database,
                     Authentication = "ActiveDirectoryIntegrated")
 

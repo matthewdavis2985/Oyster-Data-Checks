@@ -11,6 +11,7 @@ CheckEnd <- as.Date("2022-12-31")  # End Date for Checks
 EstuaryCode = "PE"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
 Database = "OysterLocalMD20230804"
+Server = "localhost\\MATTLOCALSQL"
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -64,7 +65,7 @@ font-weight: bold;
 # Connect to Local database server and pull all necessary data, then close connection 
 con <- dbConnect(odbc(),
                     Driver = "SQL Server", 
-                    Server = "localhost\\MATTLOCALSQL",
+                    Server = Server,
                     Database = Database,
                     Authentication = "ActiveDirectoryIntegrated")
 
