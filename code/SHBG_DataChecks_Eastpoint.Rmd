@@ -429,46 +429,71 @@ ShellBudgetQuad_range4 <- filter(ShellBudgetQuadrat1,
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 ShellBudgetSH1$Comments <- ifelse(nchar(ShellBudgetSH1$Comments) == 0, NA, ShellBudgetSH1$Comments) 
 
-null_ShellBudgetSH <- filter(ShellBudgetSH1, is.na(ShellHeight) & substring(ShellHeightID, 29, 32) != "001") %>%
-  select(ShellHeightID, LiveOrDead, ShellHeight, Comments)
+null_ShellBudgetSH_Live <- left_join(ShellBudgetQuadrat1, ShellBudgetSH1, by = c("QuadratID")) %>%
+  rename("Comments" = "Comments.x") %>%
+  select(ShellHeightID, ShellHeight, NumLiveOysters, LiveOrDead, Comments) %>%
+  filter(is.na(ShellHeight) & NumLiveOysters != 0 & LiveOrDead == "Live") 
+
+null_ShellBudgetSH_Dead <- left_join(ShellBudgetQuadrat1, ShellBudgetSH1, by = c("QuadratID")) %>%
+  rename("Comments" = "Comments.x") %>%
+  select(ShellHeightID, ShellHeight, NumDeadOysters, LiveOrDead, Comments) %>%
+  filter(is.na(ShellHeight) & NumDeadOysters != 0 & LiveOrDead == "Dead") 
 
   # Out of range values
 ShellBudgetSH_range <- filter(ShellBudgetSH1, ShellHeight < 1 | ShellHeight > 150) %>%
   select(ShellHeightID, LiveOrDead, ShellHeight, Comments) 
 
-  # Check for mismatch in number live counted and number measured. 
-initialSHmeasurement_live <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "001") %>%
-  rename("InitialSH" = "ShellHeight")
+  # Check for mismatch in number LIVE counted and number measured. 
+initialSHmeasurement <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "001") %>%
+  rename("InitialSH" = "ShellHeight") # Pulls in the initial SH for each quadrat
 
-SHmeasures_live <- as.data.frame(table(ShellBudgetSH1$QuadratID, ShellBudgetSH1$LiveOrDead)) %>% # Counts up the number of SH measurements that were made
+SHmeasures <- as.data.frame(table(ShellBudgetSH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
   rename("QuadratID" = "Var1",
-         "LiveOrDead" = "Var2",
          "NumMeasured" = "Freq") %>%
-  filter(LiveOrDead == "Live") %>%
-  right_join(ShellBudgetQuadrat1, initialSHmeasurement_live, by = c("QuadratID")) %>%
-  mutate(NumMeasured = ifelse(is.na(NumMeasured), -1, NumMeasured)) %>%
-  left_join(initialSHmeasurement_live, by = c("QuadratID")) %>%
-  select(QuadratID, QuadratNumber, NumLiveOysters, NumMeasured, InitialSH, Comments.x) %>%
-  filter(NumLiveOysters != NumMeasured) %>%
-  filter(!is.na(InitialSH) & NumLiveOysters != 0 & NumMeasured != 1) %>%
-  filter(NumLiveOysters > 50 & NumMeasured != 50)
+  left_join(ShellBudgetQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
+  left_join(initialSHmeasurement, by = c("QuadratID")) %>%
+  select(QuadratID, QuadratNumber, NumLiveOysters, NumMeasured, InitialSH, Comments.x) 
 
-  # Check for mismatch in number live counted and number measured. 
-initialSHmeasurement_dead <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "051") %>%
-  rename("InitialSH" = "ShellHeight")
+Over50Measured <- SHmeasures %>%
+  filter(NumMeasured > 50) %>%
+  mutate(ErrorColumn = "Over 50 measured")
 
-SHmeasures_dead <- as.data.frame(table(ShellBudgetSH1$QuadratID, ShellBudgetSH1$LiveOrDead)) %>% # Counts up the number of SH measurements that were made
+TooManyTooFew <- SHmeasures %>%
+  filter(NumLive != NumMeasured) %>%
+  filter(!(NumLive > 50 & NumMeasured == 50)) %>%
+  filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>%
+  mutate(ErrorColumn = "Too many or too few measured")
+  
+SHMismatch_Live <- union(Over50Measured, TooManyTooFew) %>%
+  arrange(QuadratID)
+
+rm(initialSHmeasurement, SHmeasures, Over50Measured, TooManyTooFew) # deletes data frames no longer needed
+
+  # Check for mismatch in number DEAD counted and number measured. 
+initialSHmeasurement <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "051") %>%
+  rename("InitialSH" = "ShellHeight") # Pulls in the initial SH for each quadrat's DEAD
+
+SHmeasures <- as.data.frame(table(ShellBudgetSH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
   rename("QuadratID" = "Var1",
-         "LiveOrDead" = "Var2",
          "NumMeasured" = "Freq") %>%
-  filter(LiveOrDead == "Dead") %>% 
-  right_join(ShellBudgetQuadrat1, initialSHmeasurement_dead, by = c("QuadratID")) %>%
-  mutate(NumMeasured = ifelse(is.na(NumMeasured), -1, NumMeasured)) %>%
-  left_join(initialSHmeasurement_dead, by = c("QuadratID")) %>%
-  select(QuadratID, QuadratNumber, NumDeadOysters, NumMeasured, InitialSH, Comments.x) %>%
-  filter(NumDeadOysters != NumMeasured) %>%
-  filter(!is.na(InitialSH) & NumDeadOysters != 0 & NumMeasured != 1) %>%
-  filter(NumDeadOysters > 50 & NumMeasured != 50)
+  left_join(ShellBudgetQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
+  left_join(initialSHmeasurement, by = c("QuadratID")) %>%
+  select(QuadratID, QuadratNumber, NumDeadOysters, NumMeasured, InitialSH, Comments.x) 
+
+Over50Measured <- SHmeasures %>%
+  filter(NumMeasured > 50) %>%
+  mutate(ErrorColumn = "Over 50 measured")
+
+TooManyTooFew <- SHmeasures %>%
+  filter(NumLive != NumMeasured) %>%
+  filter(!(NumLive > 50 & NumMeasured == 50)) %>%
+  filter(!(is.na(InitialSH) & NumDead == 0 & NumMeasured == 1)) %>%
+  mutate(ErrorColumn = "Too many or too few measured")
+  
+SHMismatch_Dead <- union(Over50Measured, TooManyTooFew) %>%
+  arrange(QuadratID)
+
+rm(initialSHmeasurement, SHmeasures, Over50Measured, TooManyTooFew) # deletes data frames no longer needed
 
 ## Set error messages #
 
@@ -490,7 +515,7 @@ if (nrow(null_ShellBudgetQuads1) > 0| nrow(null_ShellBudgetQuads2) > 0) {
   Mess_null_ShellBudgetQuads = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_ShellBudgetSH) > 0) {
+if (nrow(null_ShellBudgetSH_Live) > 0 | nrow(null_ShellBudgetSH_Dead) > 0) { 
   Mess_null_ShellBudgetSHs = ""
 } else {
   Mess_null_ShellBudgetSHs = "Congratulations! No unexpected null values detected."
@@ -514,7 +539,7 @@ if (nrow(ShellBudgetQuad_range1) > 0 | nrow(ShellBudgetQuad_range2) > 0 | nrow(S
   MessShellBudgetQuad_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(ShellBudgetSH_range) > 0 | nrow(SHmeasures_live) > 0 | nrow(SHmeasures_dead) > 0) {
+if (nrow(ShellBudgetSH_range) > 0 | nrow(SHMismatch_Live) > 0 | nrow(SHMismatch_Dead) > 0) {
   MessShellBudgetSH_ranges = ""
 } else {
   MessShellBudgetSH_ranges = "Congratulations! No out of range values detected."
@@ -583,7 +608,9 @@ comment explaining why the data is missing.
 
 <p2>`r Mess_null_ShellBudgetSHs`</p2>
 
-`r if (nrow(null_ShellBudgetSH) > 0) {kable(null_ShellBudgetSH, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001 for Live or _051 for Dead")}`
+`r if (nrow(null_ShellBudgetSHLive) > 0) {kable(null_ShellBudgetSHLive, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001 for Live.")}`
+
+`r if (nrow(null_ShellBudgetSHDead) > 0) {kable(null_ShellBudgetSHDead, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _051 for Dead.")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
@@ -634,9 +661,9 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(ShellBudgetSH_range) > 0) {kable(ShellBudgetSH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
 
-`r if (nrow(SHmeasures_live) > 0) {kable(SHmeasures_live, caption = "Mismatched Shell Height and Quadrat data. NumLiveOysters must equal NumMeasured, unless: NumLiveOysters = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLiveOysters is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+`r if (nrow(SHMismatch_Live) > 0) {kable(SHMismatch_Live, caption = "Mismatched Shell Height and Quadrat data. NumLiveOysters must equal NumMeasured, unless: NumLiveOysters = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLiveOysters is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
 
-`r if (nrow(SHmeasures_dead) > 0) {kable(SHmeasures_dead, caption = "Mismatched Shell Height and Quadrat data. NumDeadOysters must equal NumMeasured, unless: NumDeadOysters = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumDeadOysters is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+`r if (nrow(SHMismatch_Dead) > 0) {kable(SHMismatch_Dead, caption = "Mismatched Shell Height and Quadrat data. NumDeadOysters must equal NumMeasured, unless: NumDeadOysters = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumDeadOysters is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
 
 <h2>SQL Code:</h2>
 

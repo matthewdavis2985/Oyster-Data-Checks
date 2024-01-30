@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-08-28")  # End Date for Checks
+CheckStart <- as.Date("2020-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2020-08-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20231019"
+Database = "OysterLocalMD20240123"
 Server = "localhost\\MATTLOCALSQL"
 ```
 
@@ -388,8 +388,10 @@ SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 SurveySH1$Comments <- ifelse(nchar(SurveySH1$Comments) == 0, NA, SurveySH1$Comments) 
-null_SurveySH <- filter(SurveySH1, is.na(ShellHeight) & substring(ShellHeightID, 29, 32) != "001") %>%
-  select(ShellHeightID, ShellHeight, Comments)
+null_SurveySH <- left_join(SurveyQuadrat1, SurveySH1, by = c("QuadratID")) %>%
+  rename("Comments" = "Comments.x") %>%
+  select(ShellHeightID, ShellHeight, NumLive, Comments) %>%
+  filter(is.na(ShellHeight) & NumLive != 0)
 
   # Out of range values
 SurveySH_range <- filter(SurveySH1, ShellHeight < 1 | ShellHeight > 150) %>%
@@ -397,16 +399,30 @@ SurveySH_range <- filter(SurveySH1, ShellHeight < 1 | ShellHeight > 150) %>%
 
   # Check for mismatch in number live and number measured. 
 initialSHmeasurement <- filter(SurveySH1, substring(ShellHeightID, 29, 31) == "001") %>%
-  rename("InitialSH" = "ShellHeight")
+  rename("InitialSH" = "ShellHeight") # Pulls in the initial SH for each quadrat
+
 SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
   rename("QuadratID" = "Var1",
          "NumMeasured" = "Freq") %>%
   left_join(SurveyQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
   left_join(initialSHmeasurement, by = c("QuadratID")) %>%
-  select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) %>%
+  select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) 
+
+
+Over50Measured <- SHmeasures %>%
+  filter(NumMeasured > 50) %>%
+  mutate(ErrorColumn = "Over 50 measured")
+
+TooManyTooFew <- SHmeasures %>%
   filter(NumLive != NumMeasured) %>%
-  filter(!is.na(InitialSH) & NumLive != 0 & NumMeasured != 1) %>%
-  filter(NumLive > 50 & NumMeasured == 50)
+  filter(!(NumLive > 50 & NumMeasured == 50)) %>%
+  filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>%
+  mutate(ErrorColumn = "Too many or too few measured")
+  
+SHMismatch <- union(Over50Measured, TooManyTooFew) %>%
+  arrange(QuadratID)
+
+rm(initialSHmeasurement, SHmeasures, Over50Measured, TooManyTooFew) # deletes data frames no longer needed
 
 ## Set error messages #
 
@@ -452,7 +468,7 @@ if (nrow(SurveyQuad_range) > 0) {
   MessSurveyQuad_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(SurveySH_range) > 0) {
+if (nrow(SurveySH_range) > 0 | nrow(SHMismatch) > 0) {
   MessSurveySH_ranges = ""
 } else {
   MessSurveySH_ranges = "Congratulations! No out of range values detected."
@@ -519,7 +535,7 @@ comment explaining why the data is missing.
 
 <p2>`r Mess_null_SurveySHs`</p2>
 
-`r if (nrow(null_SurveySH) > 0) {kable(null_SurveySH, caption = "Null Survey Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001")}`
+`r if (nrow(null_SurveySH) > 0) {kable(null_SurveySH, caption = "Null Survey Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001 and NumLive should be 0")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
@@ -564,7 +580,7 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(SurveySH_range) > 0) {kable(SurveySH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
 
-`r if (nrow(SHmeasures) > 0) {kable(SHmeasures, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+`r if (nrow(SHMismatch) > 0) {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
 
 <h2>SQL Code:</h2>
 
