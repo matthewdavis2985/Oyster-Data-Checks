@@ -140,6 +140,12 @@ ShellBudgetSH1 <- hsdbShellBudgetSH %>%
   left_join(FixedLocations1, ShellBudgetQuadrat1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, StationName, ParcelName, ShellHeightID)
 
+# Makes a data frame for just Live and just Dead measures
+LiveSHs <- ShellBudgetSH1 %>%
+  filter(LiveOrDead == "Live")
+DeadSHs <- ShellBudgetSH1 %>%
+  filter(LiveOrDead == "Dead")
+
 ```
 
 ```{r DatabaseErrors}

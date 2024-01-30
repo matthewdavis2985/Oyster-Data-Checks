@@ -7,10 +7,10 @@ output:
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-08-28")  # End Date for Checks
+CheckEnd <- as.Date("2023-06-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20231019"
+Database = "OysterLocalMD20240123"
 Server = "localhost\\MATTLOCALSQL"
 ```
 
@@ -181,6 +181,12 @@ hsdbShellBudgetSH <- hsdbShellBudgetSH %>%
   filter(substring(QuadratID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(QuadratID,3,6) == "SHBG" & DataStatus == "Proofed") %>%
   arrange(TripDate)
 
+# Makes a data frame for just Live and just Dead measures
+LiveSHs <- ShellBudgetSH1 %>%
+  filter(LiveOrDead == "Live")
+DeadSHs <- ShellBudgetSH1 %>%
+  filter(LiveOrDead == "Dead")
+
 ```
 
 ```{r DatabaseErrors}
@@ -270,9 +276,9 @@ ERR_Table2 <- distinct(ERR_Table2)
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
 ERR_Table3 <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, ShellBudgetQuadrat1$QuadratID)
-dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, ShellBudgetQuadrat1$SampleEventID, ShellBudgetSH1$QuadratID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "ShellBudgetQuadrat")
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, ShellBudgetQuadrat1$QuadratID, ShellBudgetQuadrat1$QuadratID)
+dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, ShellBudgetQuadrat1$SampleEventID, LiveSHs$QuadratID, DeadSHs$QuadratID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "ShellBudgetQuadrat Live", "ShellBudgetQuadrat Dead")
 
 # Loop through SampleEvent$TripID values
 for (i in seq_along(sorc)) {
@@ -444,10 +450,10 @@ ShellBudgetSH_range <- filter(ShellBudgetSH1, ShellHeight < 1 | ShellHeight > 15
   select(ShellHeightID, LiveOrDead, ShellHeight, Comments) 
 
   # Check for mismatch in number LIVE counted and number measured. 
-initialSHmeasurement <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "001") %>%
+initialSHmeasurement <- filter(LiveSHs, substring(ShellHeightID, 29, 31) == "001") %>%
   rename("InitialSH" = "ShellHeight") # Pulls in the initial SH for each quadrat
 
-SHmeasures <- as.data.frame(table(ShellBudgetSH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
+SHmeasures <- as.data.frame(table(LiveSHs$QuadratID)) %>% # Counts up the number of SH measurements that were made
   rename("QuadratID" = "Var1",
          "NumMeasured" = "Freq") %>%
   left_join(ShellBudgetQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
@@ -459,9 +465,9 @@ Over50Measured <- SHmeasures %>%
   mutate(ErrorColumn = "Over 50 measured")
 
 TooManyTooFew <- SHmeasures %>%
-  filter(NumLive != NumMeasured) %>%
-  filter(!(NumLive > 50 & NumMeasured == 50)) %>%
-  filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>%
+  filter(NumLiveOysters != NumMeasured) %>%
+  filter(!(NumLiveOysters > 50 & NumMeasured == 50)) %>%
+  filter(!(is.na(InitialSH) & NumLiveOysters == 0 & NumMeasured == 1)) %>%
   mutate(ErrorColumn = "Too many or too few measured")
   
 SHMismatch_Live <- union(Over50Measured, TooManyTooFew) %>%
@@ -470,10 +476,10 @@ SHMismatch_Live <- union(Over50Measured, TooManyTooFew) %>%
 rm(initialSHmeasurement, SHmeasures, Over50Measured, TooManyTooFew) # deletes data frames no longer needed
 
   # Check for mismatch in number DEAD counted and number measured. 
-initialSHmeasurement <- filter(ShellBudgetSH1, substring(ShellHeightID, 29, 31) == "051") %>%
+initialSHmeasurement <- filter(DeadSHs, substring(ShellHeightID, 29, 31) == "051") %>%
   rename("InitialSH" = "ShellHeight") # Pulls in the initial SH for each quadrat's DEAD
 
-SHmeasures <- as.data.frame(table(ShellBudgetSH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
+SHmeasures <- as.data.frame(table(DeadSHs$QuadratID)) %>% # Counts up the number of SH measurements that were made
   rename("QuadratID" = "Var1",
          "NumMeasured" = "Freq") %>%
   left_join(ShellBudgetQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
@@ -485,9 +491,9 @@ Over50Measured <- SHmeasures %>%
   mutate(ErrorColumn = "Over 50 measured")
 
 TooManyTooFew <- SHmeasures %>%
-  filter(NumLive != NumMeasured) %>%
-  filter(!(NumLive > 50 & NumMeasured == 50)) %>%
-  filter(!(is.na(InitialSH) & NumDead == 0 & NumMeasured == 1)) %>%
+  filter(NumDeadOysters != NumMeasured) %>%
+  filter(!(NumDeadOysters > 50 & NumMeasured == 50)) %>%
+  filter(!(is.na(InitialSH) & NumDeadOysters == 0 & NumMeasured == 1)) %>%
   mutate(ErrorColumn = "Too many or too few measured")
   
 SHMismatch_Dead <- union(Over50Measured, TooManyTooFew) %>%
@@ -608,9 +614,9 @@ comment explaining why the data is missing.
 
 <p2>`r Mess_null_ShellBudgetSHs`</p2>
 
-`r if (nrow(null_ShellBudgetSHLive) > 0) {kable(null_ShellBudgetSHLive, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001 for Live.")}`
+`r if (nrow(null_ShellBudgetSH_Live) > 0) {kable(null_ShellBudgetSH_Live, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001 for Live.")}`
 
-`r if (nrow(null_ShellBudgetSHDead) > 0) {kable(null_ShellBudgetSHDead, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _051 for Dead.")}`
+`r if (nrow(null_ShellBudgetSH_Dead) > 0) {kable(null_ShellBudgetSH_Dead, caption = "Null Shell Budget Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _051 for Dead.")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
