@@ -189,7 +189,8 @@ if (nrow(ShellBudgetSH1[duplicated(ShellBudgetSH1$ShellHeightID), ]) > 0) {
 }
 
 #Combine sub tables into one table and delete sub tables
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e) %>%
+  arrange(schema, Table, PrimaryKey)
 rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
 
 
@@ -212,7 +213,8 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table2 <- distinct(ERR_Table2) 
+ERR_Table2 <- distinct(ERR_Table2) %>%
+  arrange(Table, OrphanForeignKey) 
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
@@ -230,7 +232,8 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- distinct(ERR_Table3) 
+ERR_Table3 <- distinct(ERR_Table3) %>%
+  arrange(Table, ChildlessPrimaryKey) 
 
 # Ensure there are 15 quadrats per SampleEvent
 ERR_Table3a <- as.data.frame(table(ShellBudgetQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made

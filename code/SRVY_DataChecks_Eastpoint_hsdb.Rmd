@@ -139,32 +139,6 @@ SurveySH1 <- hsdbSurveySH %>%
   left_join(FixedLocations1, SurveyQuadrat1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, ShellHeightID)
 
-# hsdbTripInfo <- hsdbTripInfo %>% 
-#   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "SRVY")  %>%
-#   arrange(TripID)
-# 
-# hsdbSampleEvent <- hsdbSampleEvent %>% 
-#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "SRVY") %>%
-#   arrange(TripDate)
-# 
-# hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
-#   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-#   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "SRVY") %>%
-#   arrange(TripDate)
-# 
-# hsdbSurveyQuadrat <- hsdbSurveyQuadrat %>% 
-#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-#          FixedLocationID = substring(QuadratID, 19, 22)) %>%
-#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
-#   arrange(TripDate)
-# 
-# hsdbSurveySH <- hsdbSurveySH %>% 
-#   mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
-#          FixedLocationID = substring(QuadratID, 19, 22)) %>%
-#   filter(substring(QuadratID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(QuadratID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
-#   arrange(TripDate)
-
 ```
 
 ```{r DatabaseErrors}
@@ -207,26 +181,8 @@ if (nrow(SurveySH1[duplicated(SurveySH1$ShellHeightID), ]) > 0) {
     select(schema, Table, PrimaryKey)
 }
 
-### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the hsdb schema
-# ERR_Tablex <- data.frame()
-# sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
-# dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSurveyQuadrat$QuadratID, hsdbSurveySH$ShellHeightID)
-# tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
-# 
-# # Loop through values
-# for (i in seq_along(sorc)) {
-#   for (j in seq_along(sorc[[i]])) {
-#     check_id <- sorc[[i]][j]
-#   # Check if the trip_id exists in TripInfo$TripID
-#     if ((check_id %in% dest[[i]])) {
-#     # Add trip_id to ERR_Table
-#       ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-#     }
-#   }
-# }
-
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e) %>%
+  arrange(schema, Table, PrimaryKey)
 rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e)
 
 
@@ -249,7 +205,8 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table2 <- distinct(ERR_Table2) 
+ERR_Table2 <- distinct(ERR_Table2) %>%
+  arrange(Table, OrphanForeignKey) 
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
@@ -267,7 +224,8 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- distinct(ERR_Table3) 
+ERR_Table3 <- distinct(ERR_Table3) %>%
+  arrange(Table, ChildlessPrimaryKey) 
 
 # Ensure there are 15 quadrats per SampleEvent
 ERR_Table3a <- as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
