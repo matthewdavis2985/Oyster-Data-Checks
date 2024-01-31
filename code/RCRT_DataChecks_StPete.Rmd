@@ -216,7 +216,8 @@ for (i in seq_along(sorc)) {
   }
 }
 
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Tablex)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Tablex) %>%
+  arrange(schema, Table, PrimaryKey)
 rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Tablex)
 
 
@@ -239,7 +240,8 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table2 <- distinct(ERR_Table2) 
+ERR_Table2 <- distinct(ERR_Table2) %>%
+  arrange(Table, OrphanForeignKey) 
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
@@ -257,7 +259,8 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- distinct(ERR_Table3) 
+ERR_Table3 <- distinct(ERR_Table3) %>%
+  arrange(Table, ChildlessPrimaryKey) 
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
