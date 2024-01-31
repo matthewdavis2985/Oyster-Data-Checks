@@ -248,8 +248,7 @@ for (i in seq_along(sorc)) {
   }
 }
 
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex) %>%
-  arrange(schema, Table, PrimaryKey)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
 rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
 
 
@@ -272,8 +271,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table2 <- distinct(ERR_Table2) %>%
-  arrange(Table, OrphanForeignKey) 
+ERR_Table2 <- distinct(ERR_Table2) 
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
@@ -291,8 +289,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- distinct(ERR_Table3) %>%
-  arrange(Table, ChildlessPrimaryKey) 
+ERR_Table3 <- distinct(ERR_Table3) 
 
 # Ensure there are 15 quadrats per SampleEvent
 ERR_Table3a <- as.data.frame(table(ShellBudgetQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made

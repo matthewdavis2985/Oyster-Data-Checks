@@ -129,6 +129,25 @@ SedimentTrap1 <- hsdbSedimentTrap %>%
   left_join(FixedLocations1, SedimentTrap1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, CupSampleID)
 
+# hsdbTripInfo <- hsdbTripInfo %>% 
+#   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Sediment Trap")  %>%
+#   arrange(TripID)
+# 
+# hsdbSampleEvent <- hsdbSampleEvent %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "SDTP") %>%
+#   arrange(TripDate)
+# 
+# hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "SDTP") %>%
+#   arrange(TripDate)
+# 
+# hsdbSedimentTrap <- hsdbSedimentTrap %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "SDTP") %>%
+#   arrange(TripDate)
+
 ```
 
 ```{r DatabaseErrors}
@@ -164,8 +183,26 @@ if (nrow(SedimentTrap1[duplicated(SedimentTrap1$CupSampleID), ]) > 0) {
     select(schema, Table, PrimaryKey)
 }
 
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d) %>%
-  arrange(schema, Table, PrimaryKey)
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are unique in the hsdb schema
+# ERR_Tablex <- data.frame()
+# sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SedimentTrap1$CupSampleID)
+# dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSedimentTrap$CupSampleID)
+# tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SedimentTrap")
+# 
+# # Loop through values
+# for (i in seq_along(sorc)) {
+#   for (j in seq_along(sorc[[i]])) {
+#     check_id <- sorc[[i]][j]
+#   # Check if the trip_id exists in TripInfo$TripID
+#     if ((check_id %in% dest[[i]])) {
+#     # Add trip_id to ERR_Table
+#       ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
+#     }
+#   }
+# }
+
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d)
 rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d)
 
 
@@ -188,8 +225,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table2 <- distinct(ERR_Table2) %>%
-  arrange(Table, OrphanForeignKey) 
+ERR_Table2 <- distinct(ERR_Table2) 
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
@@ -207,8 +243,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- distinct(ERR_Table3) %>%
-  arrange(Table, ChildlessPrimaryKey) 
+ERR_Table3 <- distinct(ERR_Table3) 
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
