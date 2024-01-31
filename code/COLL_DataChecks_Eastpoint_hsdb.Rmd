@@ -151,6 +151,38 @@ Repro1 <- hsdbRepro %>%
   left_join(FixedLocations1, Repro1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
 
+# hsdbTripInfo <- hsdbTripInfo %>% 
+#   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL")  %>%
+#   arrange(TripID)
+# 
+# hsdbSampleEvent <- hsdbSampleEvent %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
+#   arrange(TripDate)
+# 
+# hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
+#   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "COLL") %>%
+#   arrange(TripDate)
+# 
+# hsdbCI <- hsdbCI %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+#          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+#   arrange(TripDate)
+# 
+# hsdbDermo <- hsdbDermo %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+#          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+#   arrange(TripDate)
+# 
+# hsdbRepro <- hsdbRepro %>% 
+#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+#          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
+#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+#   arrange(TripDate)
+
 ```
 
 ```{r DatabaseErrors}
@@ -200,8 +232,26 @@ if (nrow(Repro1[duplicated(Repro1$OysterID), ]) > 0) {
     select(schema, Table, PrimaryKey)
 }
 
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f) %>%
-  arrange(schema, Table, PrimaryKey)
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are unique in the hsdb schema
+# ERR_Tablex <- data.frame()
+# sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, CI1$OysterID, Dermo1$OysterID, Repro1$OysterID)
+# dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbCI$OysterID, hsdbDermo$OysterID, hsdbRepro$OysterID)
+# tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "ConditionIndex", "Dermo", "Repro")
+# 
+# # Loop through values
+# for (i in seq_along(sorc)) {
+#   for (j in seq_along(sorc[[i]])) {
+#     check_id <- sorc[[i]][j]
+#   # Check if the trip_id exists in TripInfo$TripID
+#     if ((check_id %in% dest[[i]])) {
+#     # Add trip_id to ERR_Table
+#       ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
+#     }
+#   }
+# }
+
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f)
 rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f)
 
 
@@ -224,8 +274,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table2 <- distinct(ERR_Table2) %>%
-  arrange(Table, OrphanForeignKey) 
+ERR_Table2 <- distinct(ERR_Table2) 
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
@@ -243,8 +292,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- distinct(ERR_Table3) %>%
-  arrange(Table, ChildlessPrimaryKey) 
+ERR_Table3 <- distinct(ERR_Table3) 
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
