@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2020-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2020-03-28")  # End Date for Checks
+CheckStart <- as.Date("2019-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2019-12-31")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20230804E"
+Database = "OysterLocalMD20240123"
 Server = "localhost\\MATTLOCALSQL"
 ```
 
@@ -341,8 +341,11 @@ TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 SedimentTrap1$Comments <- ifelse(nchar(SedimentTrap1$Comments) == 0, NA, SedimentTrap1$Comments) 
-null_SedTraps <- filter(SedimentTrap1, is.na(FilterTareWeight) & is.na(FilterDryWeight) & is.na(NumDrills) & is.na(NumCrabs) & is.na(NumHermitCrabs) & is.na(NumFish) & is.na(NumOtherBiota) & !is.na(Comments)) %>%
-  select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, FilterDryWeight, NumDrills, NumCrabs, NumHermitCrabs, NumFish, NumOtherBiota, Comments)
+null_SedTraps1 <- filter(SedimentTrap1, is.na(NumDrills) & is.na(NumCrabs) & is.na(NumHermitCrabs) & is.na(NumFish) & is.na(NumOtherBiota) & !is.na(Comments)) %>%
+  select(TripDate, DeployedDate, StationNumber, CupSampleID, NumDrills, NumCrabs, NumHermitCrabs, NumFish, NumOtherBiota, Comments)
+
+null_SedTraps2 <- filter(SedimentTrap1, is.na(FilterTareWeight) & is.na(FilterDryWeight) & !is.na(Comments)) %>%
+  select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, FilterDryWeight, Comments)
 
   # Out of range values
 Days_range <- filter(SedimentTrap1, NumDays < 21 | NumDays > 36) %>%
@@ -365,7 +368,7 @@ if (nrow(null_WQs) > 0) {
   Mess_null_WQs = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_SedTraps) > 0) {
+if (nrow(null_SedTraps1) > 0 | nrow(null_SedTraps2) > 0) {
   Mess_null_SedTraps = ""
 } else {
   Mess_null_SedTraps = "Congratulations! No unexpected null values detected."
@@ -430,7 +433,9 @@ comment explaining why the data is missing.
 
 <p2>`r Mess_null_SedTraps`</p2>
 
-`r if (nrow(null_SedTraps) > 0) {kable(null_SedTraps, caption = "Null SedimentTrap Data. Comment Required for all Null values")}`
+`r if (nrow(null_SedTraps1) > 0) {kable(null_SedTraps1, caption = "Null SedimentTrap Data. Comment Required for all Null values")}`
+
+`r if (nrow(null_SedTraps2) > 0) {kable(null_SedTraps2, caption = "Null SedimentTrap Data. Comment Required for all Null values")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 

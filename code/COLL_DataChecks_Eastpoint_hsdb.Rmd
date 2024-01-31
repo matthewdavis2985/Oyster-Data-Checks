@@ -7,11 +7,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2020-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2020-08-28")  # End Date for Checks
+CheckStart <- as.Date("2019-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2019-12-28")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20231019"
+Database = "OysterLocalMD20240123"
 Server = "localhost\\MATTLOCALSQL"
 ```
 
@@ -374,14 +374,14 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 ## SampleEvent #
   # Unexpected Null values
 null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec)) %>%
-  select(SampleEventID, LatitudeDec, LongitudeDec)
+  select(SampleEventID, LatitudeDec, LongitudeDec, Comments)
 
   # Out of range values
 SampleEvent_range <- SampleEvent1 %>%
   rowwise() %>%
   mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>%
   filter(DistFromFixed > 1852) %>% # Flags SampleEvents that occur over 1,852 meters (1 nautical mile) from the assigned FixedLocation.  
-  select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed)
+  select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed, Comments)
   
 ## Water Quality #
   # Unexpected Null values
@@ -413,8 +413,11 @@ TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach
 
 ## ConditionIndex #
   # Unexpected Null values
-null_CI <- filter(CI1, is.na(ShellHeight), is.na(ShellLength), is.na(ShellWidth), is.na(TotalWeight), is.na(TarePanWeight), is.na(TissueWetWeight), is.na(ShellWetWeight), is.na(TissueDryWeight), is.na(ShellDryWeight)) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
+null_CI1 <- filter(CI1, is.na(ShellHeight) | is.na(ShellLength) | is.na(ShellWidth) | is.na(TotalWeight)) %>%
+  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, Comments)
+
+null_CI2 <- filter(CI1, is.na(TarePanWeight) | is.na(TissueWetWeight) | is.na(ShellWetWeight) | is.na(TissueDryWeight) | is.na(ShellDryWeight)) %>%
+  select(OysterID, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
 
   # Out of range values
 CI_range1 <- filter(CI1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | TotalWeight < 10 | TotalWeight > 250) %>%
@@ -424,7 +427,7 @@ CI_range2 <- filter(CI1, TarePanWeight < 0.9 | TarePanWeight > 5 | TissueWetWeig
 
 ## Dermo #
   # Unexpected Null values
-null_Dermo <- filter(Dermo1, is.na(ShellHeight), is.na(ShellLength), is.na(ShellWidth), is.na(TotalWeight), is.na(ShellWetWeight), is.na(DermoMantle), is.na(DermoGill)) %>%
+null_Dermo <- filter(Dermo1, is.na(ShellHeight) | is.na(ShellLength) | is.na(ShellWidth) | is.na(TotalWeight) | is.na(ShellWetWeight) | is.na(DermoMantle) | is.na(DermoGill)) %>%
   select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, Comments)
 
   # Out of range values
@@ -433,7 +436,7 @@ Dermo_range <- filter(Dermo1, ShellHeight < 10 | ShellHeight > 150 | ShellLength
 
 ## Repro #
   # Unexpected Null values
-null_Repro <- filter(Repro1, is.na(Sex), is.na(Parasite), is.na(BadSlide)) %>%
+null_Repro <- filter(Repro1, is.na(Sex) | is.na(Parasite) | is.na(BadSlide)) %>%
   select(OysterID, Sex, ReproStage, Parasite, BadSlide, Comments)
 
   # Out of range values
@@ -455,7 +458,7 @@ if (nrow(null_WQs) > 0) {
   Mess_null_WQs = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(null_CI) > 0) {
+if (nrow(null_CI1) > 0 | nrow(null_CI2) > 0 ) {
   Mess_null_CI = ""
 } else {
   Mess_null_CI = "Congratulations! No unexpected null values detected."
@@ -564,7 +567,9 @@ comment explaining why the data is missing.
 
 <p2>`r Mess_null_CI`</p2>
 
-`r if (nrow(null_CI) > 0) {kable(null_CI, caption = "Null Condition Index Data. Comment Required for all Null values")}`
+`r if (nrow(null_CI1) > 0) {kable(null_CI1, caption = "Null Condition Index Data. Comment Required for all Null values")}`
+
+`r if (nrow(null_CI2) > 0) {kable(null_CI2, caption = "Null Condition Index Data. Comment Required for all Null values")}`
 
 <h4>--- Dermo ---</h4>
 
