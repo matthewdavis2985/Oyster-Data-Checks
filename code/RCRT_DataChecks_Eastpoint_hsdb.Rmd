@@ -450,7 +450,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessRec_ranges`</p2>
 
-`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Comment required for out of range values.")}`
+`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Confirm out of range values. No Comment required.")}`
 
 `r if (nrow(Spat_range) > 0) {kable(Spat_range, caption = "Out of range Spat count data. Expected range is 0 to 50 spat. Comment required for out of range values.")}`
 

@@ -480,7 +480,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessTrap_ranges`</p2>
 
-`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Comment required for out of range values.")}`
+`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Confirm out of range values. No Comment required.")}`
 
 `r if (nrow(Tare_ranges) > 0) {kable(Tare_ranges, caption = "Out of range Tare data. Expected range for filters is 0 to 2.00 grams. Expected range for pans is 0 to 400.00 grams. Comment required for out of range values.")}`
 
