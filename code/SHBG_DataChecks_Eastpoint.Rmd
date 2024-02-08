@@ -425,39 +425,61 @@ ShellBudgetQuad_range2 <- filter(ShellBudgetQuadrat1, OysterShellWeight < 0 | Oy
 ShellBudgetQuad_range3 <- ShellBudgetQuadrat1 %>%
   mutate(Calc.Tot.Wt = LiveOysterWeight + DrillWeight + OtherBiotaWeight + OysterShellWeight + PlantedShellWeight + ShellHashWeight + BlackAndOtherSubstrateWeight,
          Calc.Tot.Vol = LiveOysterVolume + OysterShellVolume + PlantedShellVolume + ShellHashVolume + BlackAndOtherSubstrateVolume) %>%
-  filter(TotalSampleWeight < Calc.Tot.Wt*0.9 | TotalSampleWeight > Calc.Tot.Wt*1.1 | TotalSampleVolume < Calc.Tot.Vol*0.8 | TotalSampleVolume > Calc.Tot.Vol*1.2) %>%
-  select(QuadratID, TotalSampleWeight, Calc.Tot.Wt, TotalSampleVolume, Calc.Tot.Vol, Comments) #Relative ranges as a part of the whole
+  mutate(WtDiff = TotalSampleWeight - Calc.Tot.Wt,
+         WtDiffPerc = WtDiff / TotalSampleWeight,
+         VolDiff = TotalSampleVolume - Calc.Tot.Vol,
+         VolDiffPerc = VolDiff / TotalSampleVolume) %>%
+  filter(WtDiffPerc < -0.20 | WtDiffPerc > 0.20 | VolDiffPerc < -0.20 | VolDiffPerc > 0.20) %>%
+  mutate(WtDiffPerc = percent(WtDiffPerc, accuracy = 1),
+         WtDiff = round(WtDiff, 2),
+         VolDiffPerc = percent(VolDiffPerc, accuracy = 1),
+         VolDiff = round(VolDiff, 2),
+         Calc.Tot.Wt = round(Calc.Tot.Wt, 2)) %>%
+  filter(VolDiff > 0.15) %>%
+  rename(TotalWt = TotalSampleWeight, TotalVol = TotalSampleVolume) %>%
+  select(QuadratID, TotalWt, Calc.Tot.Wt, WtDiff, WtDiffPerc, TotalVol, Calc.Tot.Vol, VolDiff, VolDiffPerc, Comments) #Relative ranges as a part of the whole
 
-ShellBudgetQuad_range4 <- filter(ShellBudgetQuadrat1, 
-                                 LiveOysterVolume != 0.01 &
-                    (TotalSampleVolume < TotalSampleWeight*0.35 | TotalSampleVolume > TotalSampleWeight*0.65 |
-                    LiveOysterVolume < LiveOysterWeight*0.35 | LiveOysterVolume > LiveOysterWeight*0.65)) %>%
+ShellBudgetQuad_range4a <- mutate(ShellBudgetQuadrat1, WtToVol = TotalSampleVolume / TotalSampleWeight) %>%
+  filter(TotalSampleVolume > 0.05) %>%
+  filter(WtToVol < 0.35 | WtToVol > 0.65) %>%
+  mutate(WtToVol = percent(WtToVol, accuracy = 1)) %>%
   rename(TotalWt = TotalSampleWeight, TotalVol = TotalSampleVolume, LiveOyWt = LiveOysterWeight, LiveOyVol = LiveOysterVolume) %>%
-  select(QuadratID, TotalWt, TotalVol, LiveOyWt, LiveOyVol, Comments) #Relative ranges on an individual basis, top of the sheet
+  select(QuadratID, TotalWt, TotalVol, WtToVol, Comments) #Relative ranges on an individual basis, top of the sheet
 
-ShellBudgetQuad_range5a <- filter(ShellBudgetQuadrat1, 
-                                  OysterShellVolume != 0.01 &
-                                    (OysterShellVolume < OysterShellWeight*0.35 | OysterShellVolume > OysterShellWeight*0.65)) %>%
+ShellBudgetQuad_range4b <- mutate(ShellBudgetQuadrat1, WtToVol = LiveOysterVolume / LiveOysterWeight) %>%
+  filter(LiveOysterVolume > 0.05) %>%
+  filter(WtToVol < 0.35 | WtToVol > 0.65) %>%
+  mutate(WtToVol = percent(WtToVol, accuracy = 1)) %>%
+  rename(TotalWt = TotalSampleWeight, TotalVol = TotalSampleVolume, LiveOyWt = LiveOysterWeight, LiveOyVol = LiveOysterVolume) %>%
+  select(QuadratID, LiveOyWt, LiveOyVol, WtToVol, Comments) #Relative ranges on an individual basis, top of the sheet
+
+ShellBudgetQuad_range5a <- mutate(ShellBudgetQuadrat1, WtToVol = OysterShellVolume / OysterShellWeight) %>%
+  filter(OysterShellVolume > 0.05) %>%
+  filter(WtToVol < 0.35 | WtToVol > 0.65) %>%
+  mutate(WtToVol = percent(WtToVol, accuracy = 1)) %>%
   rename(OyShellWt = OysterShellWeight, OyShellVol = OysterShellVolume) %>%
-  select(QuadratID, OyShellWt, OyShellVol, Comments) #Relative ranges on an individual basis, bottom of the sheet
+  select(QuadratID, OyShellWt, OyShellVol, WtToVol, Comments) #Relative ranges on an individual basis, bottom of the sheet
 
-ShellBudgetQuad_range5b <- filter(ShellBudgetQuadrat1,
-                                  PlantedShellVolume != 0.01 &
-                                    (PlantedShellVolume < PlantedShellWeight*0.35 | PlantedShellVolume > PlantedShellWeight*0.65)) %>%
+ShellBudgetQuad_range5b <- mutate(ShellBudgetQuadrat1, WtToVol = PlantedShellVolume / PlantedShellWeight) %>%
+  filter(PlantedShellVolume > 0.05) %>%
+  filter(WtToVol < 0.35 | WtToVol > 0.65) %>%
+  mutate(WtToVol = percent(WtToVol, accuracy = 1)) %>%
   rename(PlantedWt = PlantedShellWeight, PlantedVol = PlantedShellVolume) %>%
-  select(QuadratID, PlantedWt, PlantedVol, Comments) #Relative ranges on an individual basis, bottom of the sheet
+  select(QuadratID, PlantedWt, PlantedVol, WtToVol, Comments) #Relative ranges on an individual basis, bottom of the sheet
 
-ShellBudgetQuad_range5c <- filter(ShellBudgetQuadrat1, 
-                                  ShellHashVolume != 0.01 &
-                                    (ShellHashVolume < ShellHashWeight*0.35 | ShellHashVolume > ShellHashWeight*0.65)) %>%
+ShellBudgetQuad_range5c <- mutate(ShellBudgetQuadrat1, WtToVol = ShellHashVolume / ShellHashWeight) %>%
+  filter(ShellHashVolume > 0.05) %>%
+  filter(WtToVol < 0.35 | WtToVol > 0.65) %>%
+  mutate(WtToVol = percent(WtToVol, accuracy = 1)) %>%
   rename(HashWt = ShellHashWeight, HashVol = ShellHashVolume) %>%
-  select(QuadratID, HashWt, HashVol, Comments) #Relative ranges on an individual basis, bottom of the sheet
+  select(QuadratID, HashWt, HashVol, WtToVol, Comments) #Relative ranges on an individual basis, bottom of the sheet
 
-ShellBudgetQuad_range5d <- filter(ShellBudgetQuadrat1,
-                                  BlackAndOtherSubstrateVolume != 0.01 &
-                                    (BlackAndOtherSubstrateVolume < BlackAndOtherSubstrateWeight*0.35 | BlackAndOtherSubstrateVolume > BlackAndOtherSubstrateWeight*0.65)) %>%
-  rename(BlkWt = BlackAndOtherSubstrateWeight, BlkVol = BlackAndOtherSubstrateVolume) %>%
-  select(QuadratID, BlkWt, BlkVol, Comments) #Relative ranges on an individual basis, bottom of the sheet
+ShellBudgetQuad_range5d <- mutate(ShellBudgetQuadrat1, WtToVol = BlackAndOtherSubstrateVolume / BlackAndOtherSubstrateWeight) %>%
+  filter(BlackAndOtherSubstrateVolume > 0.05) %>%
+  filter(WtToVol < 0.35 | WtToVol > 0.65) %>%
+  mutate(WtToVol = percent(WtToVol, accuracy = 1)) %>%
+    rename(BlkWt = BlackAndOtherSubstrateWeight, BlkVol = BlackAndOtherSubstrateVolume) %>%
+  select(QuadratID, BlkWt, BlkVol, WtToVol, Comments) #Relative ranges on an individual basis, bottom of the sheet
 
 ## ShellBudgetSH #
   # Unexpected Null values
@@ -569,7 +591,7 @@ if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_ra
   MessWQ_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(ShellBudgetQuad_range1a) > 0 | nrow(ShellBudgetQuad_range1b) > 0 | nrow(ShellBudgetQuad_range2) > 0 | nrow(ShellBudgetQuad_range3) > 0 | nrow(ShellBudgetQuad_range4) > 0 | nrow(ShellBudgetQuad_range5a) > 0 | nrow(ShellBudgetQuad_range5b) > 0 | nrow(ShellBudgetQuad_range5c) > 0 | nrow(ShellBudgetQuad_range5d) > 0) {
+if (nrow(ShellBudgetQuad_range1a) > 0 | nrow(ShellBudgetQuad_range1b) > 0 | nrow(ShellBudgetQuad_range2) > 0 | nrow(ShellBudgetQuad_range3) > 0 | nrow(ShellBudgetQuad_range4a) > 0 | nrow(ShellBudgetQuad_range4b) > 0 | nrow(ShellBudgetQuad_range5a) > 0 | nrow(ShellBudgetQuad_range5b) > 0 | nrow(ShellBudgetQuad_range5c) > 0 | nrow(ShellBudgetQuad_range5d) > 0) {
   MessShellBudgetQuad_ranges = ""
 } else {
   MessShellBudgetQuad_ranges = "Congratulations! No out of range values detected."
@@ -689,9 +711,11 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(ShellBudgetQuad_range2) > 0) {kable(ShellBudgetQuad_range2, caption = "Out of range Quadrat data. Expected range for OysterShellWeight is 0 to 4.00 kg. Expected range for OysterShellVolume is 0 to 2.0 L. Expected range for PlantedShellWeight is 0 to 10.00 kg. Expected range for PlantedShellVolume is 0 to 5.0 L. Expected range for ShellHashWeight is 0 to 2.00 kg. Expected range for ShellHashVolume is 0 to 1.0 L. Expected range for BlackSubstrateWeight is 0 to 1.00 kg. Expected range for BlackSubstrateVolume is 0 to 0.5 L. Comment required for out of range values.")}`
 
-`r if (nrow(ShellBudgetQuad_range3) > 0) {kable(ShellBudgetQuad_range3, caption = "Out of range Quadrat data. The sum of component weights are expected to be between 80% and 120% of TotalSampleWeight. The sum of component volumes are expected to be between 80% and 120% of TotalSampleVolume. Comment required for out of range values.")}`
+`r if (nrow(ShellBudgetQuad_range3) > 0) {kable(ShellBudgetQuad_range3, caption = "Out of range Quadrat data. The sum of component weights are expected to be within 20% of TotalSampleWeight. The sum of component volumes are expected to be within 20% of TotalSampleVolume. If the DiffVolume is less than 0.15 L, it is ignored. Comment required for out of range values.")}`
 
-`r if (nrow(ShellBudgetQuad_range4) > 0) {kable(ShellBudgetQuad_range4, caption = "Out of range Quadrat data. Expected range of volume is 35% to 65% of the corresponding weight. Comment required for out of range values.")}`
+`r if (nrow(ShellBudgetQuad_range4a) > 0) {kable(ShellBudgetQuad_range4a, caption = "Out of range Quadrat data. Expected range of volume is 35% to 65% of the corresponding weight. Comment required for out of range values.")}`
+
+`r if (nrow(ShellBudgetQuad_range4b) > 0) {kable(ShellBudgetQuad_range4b, caption = "Out of range Quadrat data. Expected range of volume is 35% to 65% of the corresponding weight. Comment required for out of range values.")}`
 
 `r if (nrow(ShellBudgetQuad_range5a) > 0) {kable(ShellBudgetQuad_range5a, caption = "Out of range Quadrat data. Expected range of volume is 35% to 65% of the corresponding weight. Comment required for out of range values.")}`
 

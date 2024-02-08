@@ -50,3 +50,6 @@ rsconnect/
 
 # output html in /code
 /code/*.html
+
+# output xlsx in /code
+/code/*.xlsx
