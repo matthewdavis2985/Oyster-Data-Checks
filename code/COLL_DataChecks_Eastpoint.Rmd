@@ -522,7 +522,7 @@ null_Repro <- filter(Repro1, is.na(Sex) | is.na(Parasite) | is.na(BadSlide)) %>%
 
   # Out of range values
 Repro_range <- Repro1 %>%
-  filter((Sex == "M/F" & !is.na(ReproStage)) | (Parasite == "Buceph" & !is.na(ReproStage)) | (ReproStage == 4 & Sex != "Z")) %>%
+  filter((Sex == "M/F" & ReproStage != "Z") | (Parasite == "Buceph" & !is.na(ReproStage)) | (ReproStage == 4 & Sex != "Z")) %>%
   select(OysterID, Sex, ReproStage, Parasite, BadSlide, Comments)
 
 ## Set error messages #
@@ -713,7 +713,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessRepro_ranges`</p2>
 
-`r if (nrow(Repro_range) > 0) {kable(Repro_range, caption = "Out of range Repro data. If Sex = M/F, ReproStage MUST be Null. If Parasite = Buceph, ReproStage MUST be Null. If ReproStage = 4, Sex MUST = Z.")}`
+`r if (nrow(Repro_range) > 0) {kable(Repro_range, caption = "Out of range Repro data. If Sex = M/F, ReproStage MUST = Z. If Parasite = Buceph, ReproStage MUST be Null. If ReproStage = 4, Sex MUST = Z.")}`
 
 <h2>SQL Code:</h2>
 
