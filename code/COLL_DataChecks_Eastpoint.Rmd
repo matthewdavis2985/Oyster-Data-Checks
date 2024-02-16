@@ -512,7 +512,9 @@ Dermo_range <- Dermo1 %>%
       TRUE ~ ErrorCode)) %>%
   filter(!is.na(ErrorCode)) %>%
   mutate(ErrorCode = sub("NA ", "", ErrorCode)) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, ErrorCode, Comments)
+  rename(Height = ShellHeight, Length = ShellLength, Width = ShellWidth, TotalWt = TotalWeight, ShellWetWt = ShellWetWeight, ERR = ErrorCode) %>%
+  select(OysterID, Height, Length, Width, TotalWt, ShellWetWt, DermoMantle, DermoGill, ERR, Comments)
+
 Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(B)Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. <br>(C)Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. <br>(D)Expected range for TotalWeight is 10 to 250 g. <br>(E)Expected range for ShellWetWeight is 65% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
 
 ## Repro #
@@ -522,7 +524,7 @@ null_Repro <- filter(Repro1, is.na(Sex) | is.na(Parasite) | is.na(BadSlide)) %>%
 
   # Out of range values
 Repro_range <- Repro1 %>%
-  filter((Sex == "M/F" & ReproStage != "Z") | (Parasite == "Buceph" & !is.na(ReproStage)) | (ReproStage == 4 & Sex != "Z")) %>%
+  filter((Sex == "M/F" & ReproStage != "Z") | (Parasite == "Buceph" & ReproStage != "Z") | (ReproStage == 4 & Sex != "Z")) %>%
   select(OysterID, Sex, ReproStage, Parasite, BadSlide, Comments)
 
 ## Set error messages #
@@ -713,7 +715,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessRepro_ranges`</p2>
 
-`r if (nrow(Repro_range) > 0) {kable(Repro_range, caption = "Out of range Repro data. If Sex = M/F, ReproStage MUST = Z. If Parasite = Buceph, ReproStage MUST be Null. If ReproStage = 4, Sex MUST = Z.")}`
+`r if (nrow(Repro_range) > 0) {kable(Repro_range, caption = "Out of range Repro data. If Sex = M/F, ReproStage MUST = Z. If Parasite = Buceph, ReproStage MUST = Z. If ReproStage = 4, Sex MUST = Z.")}`
 
 <h2>SQL Code:</h2>
 
