@@ -7,11 +7,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2019-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2019-12-28")  # End Date for Checks
+CheckStart <- as.Date("2021-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2022-12-31")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20240123"
+Database = "OysterLocalMD20240216"
 Server = "localhost\\MATTLOCALSQL"
 ```
 
@@ -151,38 +151,6 @@ Repro1 <- hsdbRepro %>%
   left_join(FixedLocations1, Repro1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
 
-# hsdbTripInfo <- hsdbTripInfo %>% 
-#   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL")  %>%
-#   arrange(TripID)
-# 
-# hsdbSampleEvent <- hsdbSampleEvent %>% 
-#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
-#   arrange(TripDate)
-# 
-# hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
-#   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-#   filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "COLL") %>%
-#   arrange(TripDate)
-# 
-# hsdbCI <- hsdbCI %>% 
-#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-#          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-#   arrange(TripDate)
-# 
-# hsdbDermo <- hsdbDermo %>% 
-#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-#          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-#   arrange(TripDate)
-# 
-# hsdbRepro <- hsdbRepro %>% 
-#   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-#          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-#   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-#   arrange(TripDate)
-
 ```
 
 ```{r DatabaseErrors}
@@ -232,25 +200,6 @@ if (nrow(Repro1[duplicated(Repro1$OysterID), ]) > 0) {
     select(schema, Table, PrimaryKey)
 }
 
-### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the hsdb schema
-# ERR_Tablex <- data.frame()
-# sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, CI1$OysterID, Dermo1$OysterID, Repro1$OysterID)
-# dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbCI$OysterID, hsdbDermo$OysterID, hsdbRepro$OysterID)
-# tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "ConditionIndex", "Dermo", "Repro")
-# 
-# # Loop through values
-# for (i in seq_along(sorc)) {
-#   for (j in seq_along(sorc[[i]])) {
-#     check_id <- sorc[[i]][j]
-#   # Check if the trip_id exists in TripInfo$TripID
-#     if ((check_id %in% dest[[i]])) {
-#     # Add trip_id to ERR_Table
-#       ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-#     }
-#   }
-# }
-
 ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f)
 rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f)
 
@@ -281,7 +230,7 @@ ERR_Table2 <- distinct(ERR_Table2)
 ERR_Table3 <- data.frame()
 sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
 dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, CI1$SampleEventID, Dermo1$SampleEventID, Repro1$SampleEventID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "SampleEvent", "SampleEvent")
+tabl <- list("TripInfo", "SampleEvent&WQ", "SampleEvent&CI", "SampleEvent&Dermo", "SampleEvent&Repro")
 
 # Loop through SampleEvent$TripID values
 for (i in seq_along(sorc)) {
@@ -374,6 +323,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 ## SampleEvent #
   # Unexpected Null values
 null_SampleEvents <- filter(SampleEvent1, is.na(LatitudeDec) | is.na(LongitudeDec)) %>%
+  filter(Comments != "Station not visited") %>%
   select(SampleEventID, LatitudeDec, LongitudeDec, Comments)
 
   # Out of range values
@@ -385,8 +335,10 @@ SampleEvent_range <- SampleEvent1 %>%
   
 ## Water Quality #
   # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth)) %>%
+  filter(!str_detect(Comments, "Station not visited")) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments) 
+  
 
   # Out of range values
 Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
@@ -420,10 +372,51 @@ null_CI2 <- filter(CI1, is.na(TarePanWeight) | is.na(TissueWetWeight) | is.na(Sh
   select(OysterID, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
 
   # Out of range values
-CI_range1 <- filter(CI1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | TotalWeight < 10 | TotalWeight > 250) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, Comments) 
-CI_range2 <- filter(CI1, TarePanWeight < 0.9 | TarePanWeight > 5 | TissueWetWeight < ((TotalWeight + TarePanWeight) * 0.05) | TissueWetWeight > ((TotalWeight + TarePanWeight) * 0.4) | ShellWetWeight < (TotalWeight * 0.5) | ShellWetWeight > (TotalWeight * 0.99) | TissueDryWeight < TarePanWeight | TissueDryWeight > (TissueWetWeight * 0.9) | ShellDryWeight < (ShellWetWeight * 0.8) | ShellDryWeight > ShellWetWeight) %>%
-  select(OysterID, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, Comments)
+CI_range1 <- CI1 %>%
+  mutate(
+    ErrorCode = case_when(
+      ShellHeight < 10 | ShellHeight > 150 ~ "A",
+      TRUE ~ NA_character_),
+    ErrorCode = case_when(
+      ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight ~ paste(ErrorCode, "B"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength ~ paste(ErrorCode, "C"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      TotalWeight < 10 | TotalWeight > 250 ~ paste(ErrorCode, "D"),
+      TRUE ~ ErrorCode)) %>%
+  filter(!is.na(ErrorCode)) %>%
+  mutate(ErrorCode = sub("NA ", "", ErrorCode)) %>%
+  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ErrorCode, Comments)
+CI_range1caption <- "Out of range Condition data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(B)Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. <br>(C)Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. <br>(D)Expected range for TotalWeight is 10 to 250 g."
+
+CI_range2 <- CI1 %>%
+  mutate(
+    ErrorCode = case_when(
+      TotalWeight < (TissueWetWeight + ShellWetWeight - TarePanWeight) | (TotalWeight * 0.8) > (TissueWetWeight + ShellWetWeight - TarePanWeight) ~ "A",
+      TRUE ~ NA_character_),
+    ErrorCode = case_when(
+      TarePanWeight < 0.9 | TarePanWeight > 5 ~ paste(ErrorCode, "B"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      TissueWetWeight < ((TotalWeight + TarePanWeight) * 0.05) | TissueWetWeight > 
+        ((TotalWeight + TarePanWeight) * 0.4) ~ paste(ErrorCode, "C"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      ShellWetWeight < (TotalWeight * 0.65) | ShellWetWeight > (TotalWeight * 0.99) ~ paste(ErrorCode, "D"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      TissueDryWeight < TarePanWeight | TissueDryWeight > (TissueWetWeight * 0.9) ~ paste(ErrorCode, "E"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      ShellDryWeight < (ShellWetWeight * 0.8) | ShellDryWeight > ShellWetWeight ~ paste(ErrorCode, "F"),
+      TRUE ~ ErrorCode)) %>%
+  filter(!is.na(ErrorCode)) %>%
+  mutate(ErrorCode = sub("NA ", "", ErrorCode)) %>%
+  rename(TotalWt = TotalWeight, TarePanWt = TarePanWeight, TissueWetWt = TissueWetWeight, ShellWetWt = ShellWetWeight, TissueDryWt = TissueDryWeight, ShellDryWt = ShellDryWeight) %>%
+  select(OysterID, TotalWt, TarePanWt, TissueWetWt, ShellWetWt, TissueDryWt, ShellDryWt, ErrorCode, Comments)
+CI_range2caption <- "Out of range Condition data. Comment required for out of range values. <br>(A) Expected range for TotalWeight is 80% to 100% of the sum of TissueWetWeight and ShellWetWeight minus TarePanWeight. <br>(B) Expected range for TarePanWeight is 0.9 to 5.0 g. <br>(C) Expected range for TissueWetWeight is 5% to 40% of the sum of TotalWeight and TarePanWeight. <br>(D) Expected range for ShellWetWeight is 65% to 99% of TotalWeight. <br>(E) Expected range for TissueDryWeight is greater than TarePanWeight and up to 90% of TissueWetWeight. <br>(F) Expected range for ShellDryWeight is 80% to 100% of ShellWetWeight."
 
 ## Dermo #
   # Unexpected Null values
@@ -431,8 +424,32 @@ null_Dermo <- filter(Dermo1, is.na(ShellHeight) | is.na(ShellLength) | is.na(She
   select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, Comments)
 
   # Out of range values
-Dermo_range <- filter(Dermo1, ShellHeight < 10 | ShellHeight > 150 | ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight | ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength | TotalWeight < 10 | TotalWeight > 250 | DermoMantle < 0 | DermoMantle > 5 | DermoGill < 0 | DermoGill > 5) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, DermoMantle, DermoGill, Comments)
+Dermo_range <- Dermo1 %>%
+  mutate(
+    ErrorCode = case_when(
+      ShellHeight < 10 | ShellHeight > 150 ~ "A",
+      TRUE ~ NA_character_),
+    ErrorCode = case_when(
+      ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight ~ paste(ErrorCode, "B"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength ~ paste(ErrorCode, "C"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      TotalWeight < 10 | TotalWeight > 250 ~ paste(ErrorCode, "D"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      ShellWetWeight < (TotalWeight * 0.65) | ShellWetWeight > (TotalWeight * 0.99) ~ paste(ErrorCode, "E"),
+      TRUE ~ ErrorCode),
+    ErrorCode = case_when(
+      DermoMantle < 0 | DermoMantle > 5 | DermoGill < 0 | DermoGill > 5 ~ paste(ErrorCode, "F"),
+      TRUE ~ ErrorCode)) %>%
+  filter(!is.na(ErrorCode)) %>%
+  mutate(ErrorCode = sub("NA ", "", ErrorCode)) %>%
+  rename(Height = ShellHeight, Length = ShellLength, Width = ShellWidth, TotalWt = TotalWeight, ShellWetWt = ShellWetWeight, ERR = ErrorCode) %>%
+  select(OysterID, Height, Length, Width, TotalWt, ShellWetWt, DermoMantle, DermoGill, ERR, Comments)
+
+Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(B)Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. <br>(C)Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. <br>(D)Expected range for TotalWeight is 10 to 250 g. <br>(E)Expected range for ShellWetWeight is 65% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
 
 ## Repro #
   # Unexpected Null values
@@ -441,7 +458,7 @@ null_Repro <- filter(Repro1, is.na(Sex) | is.na(Parasite) | is.na(BadSlide)) %>%
 
   # Out of range values
 Repro_range <- Repro1 %>%
-  filter((Sex == "M/F" & !is.na(ReproStage)) | (Parasite == "Buceph" & !is.na(ReproStage)) | (ReproStage == 4 & Sex != "Z")) %>%
+  filter((Sex == "M/F" & ReproStage != "Z") | (Parasite == "Buceph" & ReproStage != "Z") | (ReproStage == 4 & Sex != "Z")) %>%
   select(OysterID, Sex, ReproStage, Parasite, BadSlide, Comments)
 
 ## Set error messages #
@@ -618,21 +635,21 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessCI_ranges`</p2>
 
-`r if (nrow(CI_range1) > 0) {kable(CI_range1, caption = "Out of range Condition data. Expected range for ShellHeight is 10 to 150 mm. Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. Expected range for TotalWeight is 10 to 250 g. Comment required for out of range values.")}`
+`r if (nrow(CI_range1) > 0) {kable(CI_range1, caption = CI_range1caption)}`
 
-`r if (nrow(CI_range2) > 0) {kable(CI_range2, caption = "Out of range Condition data. Expected range for TarePanWeight is 0.9 to 5.0 g. Expected range for TissueWetWeight is 5% to 40% of the sum of TotalWeight and TarePanWeight. Expected range for ShellWetWeight is 50% to 99% of TotalWeight. Expected range for TissueDryWeight is greater than TarePanWeight and up to 90% of TissueWetWeight. Expected range for ShellDryWeight is 80% to 100% of ShellWetWeight. Comment required for out of range values.")}`
+`r if (nrow(CI_range2) > 0) {kable(CI_range2, caption = CI_range2caption)}`
 
 <h4>--- Dermo ---</h4>
 
 <p2>`r MessDermo_ranges`</p2>
 
-`r if (nrow(Dermo_range) > 0) {kable(Dermo_range, caption = "Out of range Dermo data. Expected range for ShellHeight is 10 to 150 mm. Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. Expected range for TotalWeight is 10 to 250 g. Expected ranges for DermoMantle and DermoGill is 0 to 5. Comment required for out of range values.")}`
+`r if (nrow(Dermo_range) > 0) {kable(Dermo_range, caption = Dermo_rangecaption)}`
 
 <h4>--- Repro ---</h4>
 
 <p2>`r MessRepro_ranges`</p2>
 
-`r if (nrow(Repro_range) > 0) {kable(Repro_range, caption = "Out of range Repro data. If Sex = M/F, ReproStage MUST be Null. If Parasite = Buceph, ReproStage MUST be Null. If ReproStage = 4, Sex MUST = Z.")}`
+`r if (nrow(Repro_range) > 0) {kable(Repro_range, caption = "Out of range Repro data. If Sex = M/F, ReproStage MUST = Z. If Parasite = Buceph, ReproStage MUST = Z. If ReproStage = 4, Sex MUST = Z.")}`
 
 <h2>SQL Code:</h2>
 
