@@ -7,11 +7,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2017-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2017-08-28")  # End Date for Checks
+CheckStart <- as.Date("2016-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2022-12-31")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20231019"
+Database = "OysterLocalMD20240223"
 Server = "localhost\\MATTLOCALSQL"
 ```
 
@@ -155,7 +155,7 @@ ShellPest_nulls <- filter(ShellPest1, is.na(ShellPestID), is.na(OysterID) | is.n
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dest, FixedLocations1, hsdbCI, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dboFixedLocations, dest, FixedLocations1, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
