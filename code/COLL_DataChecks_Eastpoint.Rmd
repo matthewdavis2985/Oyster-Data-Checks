@@ -763,37 +763,37 @@ BEGIN
 
 	INSERT INTO #ValidTrips (TripID)
 	SELECT TripID
-	FROM hsdb.TripInfo
+	FROM dbo.TripInfo
 	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
 	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'COLL%');
 
 	-- Query the TripInfo table using the temporary table
-	UPDATE hsdb.TripInfo 
+	UPDATE dbo.TripInfo 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEvent table using the temporary table
-	UPDATE hsdb.SampleEvent 
+	UPDATE dbo.SampleEvent 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEventWQ table using the temporary table
-	UPDATE hsdb.SampleEventWQ 
+	UPDATE dbo.SampleEventWQ 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
   -- Query the ConditionIndex table using the temporary table
-  UPDATE hsdb.ConditionIndex 
+  UPDATE dbo.ConditionIndex 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
   
   -- Query the Dermo table using the temporary table
-  UPDATE hsdb.Dermo 
+  UPDATE dbo.Dermo 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
   
   -- Query the Repro table using the temporary table
-  UPDATE hsdb.Repro 
+  UPDATE dbo.Repro 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
