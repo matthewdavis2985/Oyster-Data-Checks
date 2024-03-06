@@ -8,9 +8,9 @@ output:
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
 CheckEnd <- as.Date("2023-6-30")  # End Date for Checks
-EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
+EstuaryCode = "SA"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20240223"
+Database = "OysterLocalMD20240305"
 Server = "localhost\\MATTLOCALSQL"
 ```
 

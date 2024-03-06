@@ -7,10 +7,10 @@ output:
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-06-28")  # End Date for Checks
+CheckEnd <- as.Date("2023-12-31")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20240123"
+Database = "OysterLocalMD20240306"
 Server = "localhost\\MATTLOCALSQL"
 ```
 
@@ -781,27 +781,27 @@ BEGIN
 
 	INSERT INTO #ValidTrips (TripID)
 	SELECT TripID
-	FROM hsdb.TripInfo
+	FROM dbo.TripInfo
 	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
 	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'SHBG%');
 
 	-- Query the TripInfo table using the temporary table
-	UPDATE hsdb.TripInfo 
+	UPDATE dbo.TripInfo 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEvent table using the temporary table
-	UPDATE hsdb.SampleEvent 
+	UPDATE dbo.SampleEvent 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
   -- Query the ShellBudgetQuadrat table using the temporary table
-  UPDATE hsdb.ShellBudgetQuadrat 
+  UPDATE dbo.ShellBudgetQuadrat 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
   
   -- Query the ShellBudgetSH table using the temporary table
-  UPDATE hsdb.ShellBudgetSH 
+  UPDATE dbo.ShellBudgetSH 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE QuadratID IN (SELECT QuadratID FROM ShellBudgetQuadrat WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
   
