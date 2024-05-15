@@ -6,12 +6,12 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-08-28")  # End Date for Checks
-EstuaryCode = "PE"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2023-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2023-12-31")  # End Date for Checks
+EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20230720E"
-Server = "localhost\\MATTLOCALSQL"
+Database = "OysterLocalMD20240314"
+Server = "localhost\\LOCALSQL"
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -645,32 +645,32 @@ BEGIN
 
 	INSERT INTO #ValidTrips (TripID)
 	SELECT TripID
-	FROM hsdb.TripInfo
+	FROM dbo.TripInfo
 	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
 	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'SRVY%');
 
 	-- Query the TripInfo table using the temporary table
-	UPDATE hsdb.TripInfo 
+	UPDATE dbo.TripInfo 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEvent table using the temporary table
-	UPDATE hsdb.SampleEvent 
+	UPDATE dbo.SampleEvent 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEventWQ table using the temporary table
-	UPDATE hsdb.SampleEventWQ 
+	UPDATE dbo.SampleEventWQ 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
   -- Query the SurveyQuadrat table using the temporary table
-  UPDATE hsdb.SurveyQuadrat 
+  UPDATE dbo.SurveyQuadrat 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
   
   -- Query the SurveySH table using the temporary table
-  UPDATE hsdb.SurveySH 
+  UPDATE dbo.SurveySH 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE QuadratID IN (SELECT QuadratID FROM SurveyQuadrat WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
 

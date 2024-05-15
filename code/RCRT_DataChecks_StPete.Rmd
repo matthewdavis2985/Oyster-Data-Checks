@@ -7,11 +7,11 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-12-31")  # End Date for Checks
-EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2024-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-04-30")  # End Date for Checks
+EstuaryCode = "TB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "OystersEL_240119"
+Database = "Oysters_24-05-15"
 Server = "localhost\\ERICALOCALSQL"
 ```
 
@@ -320,7 +320,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 
 ## Water Quality #
   # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>% filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), SampleEventWQ1$Comments)) %>%
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>% filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), Comments)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
 
   # Out of range values
@@ -357,7 +357,7 @@ null_Recs <- filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 5 | Shel
 
   # Out of range values
 Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
-  select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate, Comments) %>%
+  select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate) %>%
   distinct()
 # Code above reduces the number of records outside of the range by showing only distinct. If you need to view ALL records affected, substitute with the commented out code below.
 # Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
@@ -450,7 +450,7 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
 
-`r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range dissolved oxygen data. Expected range is 50% to 120% saturation. . Comment required for out of range values.")}`
+`r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range dissolved oxygen data. Expected range is 50% to 120% saturation. Comment required for out of range values.")}`
 
 `r if (nrow(pH_range) > 0) {kable(pH_range, caption = "Out of range pH data. Expected range is 7.0 to 8.5. Comment required for out of range values.")}`
 
@@ -466,7 +466,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessRec_ranges`</p2>
 
-`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Comment required for out of range values.")}`
+`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Confirm out of range values. No comment required.")}`
 
 `r if (nrow(Spat_range) > 0) {kable(Spat_range, caption = "Out of range Spat count data. Expected range is 0 to 50 spat. Comment required for out of range values.")}`
 
@@ -489,63 +489,76 @@ EXECUTE [dbo].[spChecksRecruitment]
 
 `r knit_exit()`
 
-```{sql SQL code, eval=FALSE, include=FALSE}
+```{sql SQL code, eval=FALSE, include=TRUE}
 
--- Check that there is not already a temporary table to store valid TripIDs. If there is, DELETE it and create a clean temporary table
-IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
+--- This code creates a stored procedure in the database. 
+-- To do so, copy and paste this code VERBATIM into SSMS
+-- DO NOT RUN THIS CODE WITH R --
+
+
+CREATE PROCEDURE [dbo].[spChecksRecruitment](
+	@CheckStart AS DATE,
+	@CheckEnd AS DATE,
+	@EstuaryCode AS VARCHAR(2),
+	@DataManager AS VARCHAR(max)
+	)
+AS
 BEGIN
-    DROP TABLE #ValidTrips;
+	DECLARE @CompletedDate DATE;
+	SET @CompletedDate = cast(getDate() as date);
+
+	IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
+	BEGIN
+		DROP TABLE #ValidTrips;
+	END
+
+	CREATE TABLE #ValidTrips (
+		TripID VARCHAR(50)
+	);
+
+	INSERT INTO #ValidTrips (TripID)
+	SELECT TripID
+	FROM TripInfo
+	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
+	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'RCRT%');
+
+	-- Query the TripInfo table using the temporary table
+	UPDATE TripInfo 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+	-- Query the SampleEvent table using the temporary table
+	UPDATE SampleEvent 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+	-- Query the SampleEventWQ table using the temporary table
+	UPDATE SampleEventWQ 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
+	-- Query the Recruitment table using the temporary table
+	UPDATE Recruitment 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
+	-- Insert the Completed data into hsdb, and DELETE FROM dbo
+	INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
+
+	DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
+
+	INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
+
+	DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
+
+	INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
+
+	DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
+
+	INSERT INTO hsdb.Recruitment SELECT * FROM Recruitment WHERE DataStatus = 'Completed';
+
+	DELETE FROM dbo.Recruitment WHERE DataStatus = 'Completed';
+
 END
-
-CREATE TABLE #ValidTrips (
-    TripID VARCHAR(50)
-);
-
-INSERT INTO #ValidTrips (TripID)
-SELECT TripID
-FROM TripInfo
-WHERE TripDate >= '`r CheckStart`' AND TripDate <= '`r CheckEnd`'
-AND DataStatus = 'Proofed' AND TripID like '`r EstuaryCode`RCRT%';
-
--- Query the TripInfo table using the temporary table
-UPDATE TripInfo 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r ceiling_date(Sys.Date(), "month") - 1`'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
--- Query the SampleEvent table using the temporary table
-UPDATE SampleEvent 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r ceiling_date(Sys.Date(), "month") - 1`'
-WHERE TripID IN (SELECT TripID FROM #ValidTrips);
-
--- Query the SampleEventWQ table using the temporary table
-UPDATE SampleEventWQ 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r ceiling_date(Sys.Date(), "month") - 1`'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
-
--- Query the Recruitment table using the temporary table
-UPDATE Recruitment 
-SET DataStatus = 'Completed', CompletedBy = '`r DataManager`', DateCompleted = '`r ceiling_date(Sys.Date(), "month") - 1`'
-WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
-
--- Insert the Completed data into hsdb, and DELETE FROM dbo
-INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SampleEvent
-(SampleEventID,TripID,FixedLocationID,LatitudeDec,LongitudeDec,LatDec,LatMin,LongDec,LongMin,NumDrills,HarvestStatus,DataStatus,DateEntered,EnteredBy,DateProofed,ProofedBy,DateCompleted, CompletedBy,Comments,AdminNotes) 
-SELECT SampleEventID,TripID,FixedLocationID,LatitudeDec,LongitudeDec,LatDec,LatMin,LongDec,LongMin,NumDrills,HarvestStatus,DataStatus,DateEntered,EnteredBy,DateProofed,ProofedBy,DateCompleted, CompletedBy,Comments,AdminNotes 
-FROM SampleEvent WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
-
-INSERT INTO hsdb.Recruitment SELECT * FROM Recruitment WHERE DataStatus = 'Completed';
-
-DELETE FROM dbo.Recruitment WHERE DataStatus = 'Completed';
-
 
 ```

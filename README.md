@@ -4,7 +4,7 @@ PROJECT DESCRIPTION:
 This project is intended to house code for performing data checks on FWRI oyster data. This is the final step in our data flow and involves using R to inspect data for errors. RMarkdown scripts exist for each trip type and lab location. This allows for customization in the error detection process. Data managers are currently the only FWRI staff who will be able to execute these scripts.
 
 PROJECT STATUS:  
-This project is currently under development. Code is still being written and revised. Many RMarkdown scripts still need to be created and refined.
+This project is currently active. These scripts are being used to fulfill the Project Description. Code may still be revised as needs arise. 
 
 GETTING STARTED:  
 You will need:
@@ -25,5 +25,4 @@ SUGGESTED WORKFLOW:
 
 FILE STRUCTURE:  
 /code - RMarkdown scripts  
-/documentation - In depth documentation of RMarkdown scripts  
-/outputs - The outputs of the RMarkdown scripts  
+/code/archive - scripts to check data uploaded prior to ODIN 
