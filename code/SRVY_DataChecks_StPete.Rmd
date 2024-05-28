@@ -8,10 +8,10 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-12-31")  # End Date for Checks
+CheckEnd <- as.Date("2024-05-30")  # End Date for Checks
 EstuaryCode = "TB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "OystersEL_Temp"
+Database = "Oysters_24-05-23_test"
 Server = "localhost\\ERICALOCALSQL"
 ```
 
@@ -288,9 +288,11 @@ ERR_Table3 <- distinct(ERR_Table3)
 # Ensure there are 15 quadrats per SampleEvent for all Sites except TB 2023-current
 # Counts up the number of quadrats that were made
 ERR_Table3a <- if(EstuaryCode == "TB" & CheckStart >= as.Date("2023-01-01")){ as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% 
-    rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq") %>% filter(NumOfQuads != 5)
+    rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq") %>% filter(NumOfQuads != 5) %>%
+    merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments))
 } else {as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
-  rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq") %>% filter(NumOfQuads != 15)}
+  rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq") %>% filter(NumOfQuads != 15) %>%
+    merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments))}
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
