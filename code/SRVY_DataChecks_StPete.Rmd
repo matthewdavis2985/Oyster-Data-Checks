@@ -9,7 +9,7 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
 CheckEnd <- as.Date("2024-05-30")  # End Date for Checks
-EstuaryCode = "CR"  # Estuary Code. Use 2-letter code in Primary Keys
+EstuaryCode = "LX"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
 Database = "Oysters_24-05-28_test"
 Server = "localhost\\ERICALOCALSQL"
@@ -479,6 +479,8 @@ if(EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode == "LW"){
 
 if(EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode == "LW"){
   SHMismatch <- union(Over10Measured, TooManyTooFew) %>% arrange(QuadratID)
+} else if(EstuaryCode == "CR"){
+  SHMismatch <- union(Over10Measured, Over50Measured, TooManyTooFew) %>% arrange(QuadratID)
 }else{
   SHMismatch <- union(Over50Measured, TooManyTooFew) %>% arrange(QuadratID)
   }
