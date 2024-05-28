@@ -453,7 +453,10 @@ SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the numb
 
 if(EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode == "LW"){
   Over10Measured <- SHmeasures %>% filter(NumMeasured > 10) %>% mutate(ErrorColumn = "Over 10 measured")
-} else {
+} else if(EstuaryCode == "CR"){
+  Over10Measured <- SHmeasures %>% filter(QuadratNumber < 11 & NumMeasured > 10) %>% mutate(ErrorColumn = "Over 10 measured")
+  Over50Measured <- SHmeasures %>% filter(QuadratNumber > 10 & NumMeasured > 50) %>% mutate(ErrorColumn = "Over 50 measured")
+}else {
     Over50Measured <- SHmeasures %>% filter(NumMeasured > 50) %>% mutate(ErrorColumn = "Over 50 measured")
     }
 
@@ -461,6 +464,11 @@ if(EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode == "LW"){
   TooManyTooFew <- SHmeasures %>% filter(NumLive != NumMeasured) %>% 
     filter(!(NumLive > 10 & NumMeasured == 10)) %>% 
     filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>%
+    mutate(ErrorColumn = "Too many or too few measured")
+} else if(EstuaryCode == "CR"){
+  TooManyTooFew <- SHmeasures %>% filter(NumLive != NumMeasured) %>% mutate(Location = as.numeric(substring(QuadratID, 19, 22))) %>%
+    filter((!(NumLive > 10 & NumMeasured == 10) & QuadratNumber < 11 & !is.na(Location)) | (!(NumLive > 50 & NumMeasured == 50) & QuadratNumber > 10)) %>% 
+    filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>% dplyr::select(-Location) %>%
     mutate(ErrorColumn = "Too many or too few measured")
 } else {
     TooManyTooFew <- SHmeasures %>% filter(NumLive != NumMeasured) %>% 
