@@ -364,9 +364,9 @@ SampleEvent_range <- NULL
   
 ## Water Quality #
   # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>% 
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth) | is.na(PercentDissolvedOxygen)) %>% 
   filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), Comments)) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
   # Out of range values
 Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
@@ -375,9 +375,12 @@ Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
 DO_range <- SampleEventWQ1 %>% 
   mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
-  filter(DO.Sat < 0.50 | DO.Sat > 1.20) %>%
+  filter(DO.Sat < 0.50 | DO.Sat > 1.50) %>%
   mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, DO.Sat, Comments)
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, PercentDissolvedOxygen, DO.Sat, Comments)
+DOPct_range <- SampleEventWQ1 %>% 
+  filter(PercentDissolvedOxygen < 20 | PercentDissolvedOxygen > 150) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, PercentDissolvedOxygen, Comments)
 pH_range <- filter(SampleEventWQ1, pH < 7.0 | pH > 8.5) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, pH, Comments)
 Depth_range <- filter(SampleEventWQ1, Depth < 0 | Depth > 3.5) %>%
@@ -411,7 +414,7 @@ SurveyQuad_range <- if(EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode =
     select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
 }else{
   filter(SurveyQuadrat1, NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500 | TotalVolume < 0.25 | 
-           TotalVolume > 5.0 | TotalWeight < 0.1 | TotalWeight > 10.00) %>%
+           TotalVolume > 5.5 | TotalWeight < 0.1 | TotalWeight > 10.00) %>%
     select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
 }
 
@@ -601,7 +604,9 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 38.0 ppt. Comment required for out of range values.")}`
 
-`r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range dissolved oxygen data. Expected range is 50% to 120% saturation. . Comment required for out of range values.")}`
+`r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range dissolved oxygen data. Expected calculated range is 50% to 120% saturation. Comment required for out of range values.")}`
+
+`r if (nrow(DOPct_range) > 0) {kable(DOPct_range, caption = "Out of range percent dissolved oxygen data. Expected range is 20% to 150% saturation. Comment required for out of range values.")}`
 
 `r if (nrow(pH_range) > 0) {kable(pH_range, caption = "Out of range pH data. Expected range is 7.0 to 8.5. Comment required for out of range values.")}`
 
@@ -617,7 +622,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessSurveyQuad_ranges`</p2>
 
-`r if (nrow(SurveyQuad_range) > 0 & EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode == "LW") {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Comment required for out of range values.")} else {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Expected range for TotalVolume is 0.05 to 5.0 L. Expected range for TotalWeight is 0.10 to 10.00 kg. Comment required for out of range values.")}`
+`r if (nrow(SurveyQuad_range) > 0 & EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode == "LW") {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Comment required for out of range values.")} else {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Expected range for TotalVolume is 0.05 to 5.5 L. Expected range for TotalWeight is 0.10 to 10.00 kg. Comment required for out of range values.")}`
 
 <h4>--- Survey Shell Heights ---</h4>
 
