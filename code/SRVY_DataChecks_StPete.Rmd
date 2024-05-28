@@ -9,7 +9,7 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 # Set your variables
 CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
 CheckEnd <- as.Date("2024-05-30")  # End Date for Checks
-EstuaryCode = "TB"  # Estuary Code. Use 2-letter code in Primary Keys
+EstuaryCode = "CR"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
 Database = "Oysters_24-05-28_test"
 Server = "localhost\\ERICALOCALSQL"
@@ -403,7 +403,10 @@ SurveyQuadrat1$Comments <- ifelse(nchar(SurveyQuadrat1$Comments) == 0, NA, Surve
 null_SurveyQuads <- if(EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode == "LW") {
   filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) & !is.na(Comments)) %>%
     select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
-  }else {
+  } else if(EstuaryCode == "CR") {
+    filter(SurveyQuadrat1, (QuadratNumber < 11 & (is.na(NumLive) | is.na(NumDead)) & !is.na(Comments)) | (QuadratNumber > 10 & (is.na(NumLive) | is.na(NumDead) | is.na(TotalVolume) | is.na(TotalWeight)) & !is.na(Comments))) %>%
+    select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
+  } else {
   filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.na(TotalVolume) | is.na(TotalWeight) & !is.na(Comments)) %>%
   select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
 }
@@ -412,7 +415,11 @@ null_SurveyQuads <- if(EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode =
 SurveyQuad_range <- if(EstuaryCode == "SL" | EstuaryCode == "LX" | EstuaryCode == "LW") {
   filter(SurveyQuadrat1, NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500) %>%
     select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
-}else{
+} else if (EstuaryCode == "CR"){
+  filter(SurveyQuadrat1, (QuadratNumber < 11 & (NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500)) |(QuadratNumber > 10 & (NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500 | TotalVolume < 0.25 | 
+           TotalVolume > 5.5 | TotalWeight < 0.1 | TotalWeight > 10.00))) %>%
+    select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
+} else {
   filter(SurveyQuadrat1, NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500 | TotalVolume < 0.25 | 
            TotalVolume > 5.5 | TotalWeight < 0.1 | TotalWeight > 10.00) %>%
     select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
