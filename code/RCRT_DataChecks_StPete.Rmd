@@ -7,11 +7,12 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
+CheckStart <- as.Date("2024-01-01")  # Start Date for Checks
 CheckEnd <- as.Date("2024-04-30")  # End Date for Checks
 EstuaryCode = "TB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-05-28_test"
+Database = "Oysters_24-05-15"
+
 Server = "localhost\\ERICALOCALSQL"
 ```
 
@@ -320,6 +321,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 
 ## Water Quality #
   # Unexpected Null values
+
 null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth) | is.na(PercentDissolvedOxygen)) %>% filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), Comments)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
@@ -457,6 +459,7 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(DOPct_range) > 0) {kable(DOPct_range, caption = "Out of range percent dissolved oxygen data. Expected range is 20% to 150% saturation. Comment required for out of range values.")}`
 
+
 `r if (nrow(pH_range) > 0) {kable(pH_range, caption = "Out of range pH data. Expected range is 7.0 to 8.5. Comment required for out of range values.")}`
 
 `r if (nrow(Depth_range) > 0) {kable(Depth_range, caption = "Out of range depth data. Expected range is 0.0 to 3.5 m. Cannot be less than 0. Comment required for out of range values.")}`
@@ -499,7 +502,6 @@ EXECUTE [dbo].[spChecksRecruitment]
 --- This code creates a stored procedure in the database. 
 -- To do so, copy and paste this code VERBATIM into SSMS
 -- DO NOT RUN THIS CODE WITH R --
-
 
 CREATE PROCEDURE [dbo].[spChecksRecruitment](
 	@CheckStart AS DATE,
