@@ -7,11 +7,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-11-30")  # End Date for Checks
-EstuaryCode = "CR"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2023-04-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-05-30")  # End Date for Checks
+EstuaryCode = "LW"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "OystersEL_240104"
+Database = "Oysters_24-05-30_test"
 Server = "localhost\\ERICALOCALSQL"
 ```
 
@@ -359,7 +359,7 @@ SedimentTrap1$Comments <- ifelse(nchar(SedimentTrap1$Comments) == 0, NA, Sedimen
 null_SedTraps1 <- filter(SedimentTrap1, is.na(NumDrills) & is.na(NumCrabs) & is.na(NumHermitCrabs) & is.na(NumFish) & is.na(NumOtherBiota) & !is.na(Comments)) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, NumDrills, NumCrabs, NumHermitCrabs, NumFish, NumOtherBiota, Comments)
 
-null_SedTraps2 <- filter(SedimentTrap1, is.na(FilterTareWeight) & is.na(FilterDryWeight) & !is.na(Comments)) %>%
+null_SedTraps2 <- filter(SedimentTrap1, is.na(FilterTareWeight) & is.na(FilterDryWeight) & is.na(Volume) & !is.na(Comments)) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, FilterDryWeight, Comments)
 
   # Out of range values
@@ -372,7 +372,7 @@ Days_range <- filter(SedimentTrap1, NumDays < 21 | NumDays > 36) %>%
 
 Tare_ranges <- filter(SedimentTrap1, FilterTareWeight < 0 | FilterTareWeight > 3.50 | PanTareWeight < 0 | PanTareWeight > 400.00) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, PanTareWeight, Comments)
-Dry_ranges <- filter(SedimentTrap1, FilterDryWeight < FilterTareWeight | FilterDryWeight > 12 | PanDryWeight < PanTareWeight | PanDryWeight > 600) %>%
+Dry_ranges <- filter(SedimentTrap1, FilterDryWeight < FilterTareWeight | FilterDryWeight > 12.5 | PanDryWeight < PanTareWeight | PanDryWeight > 600) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, FilterDryWeight, PanTareWeight, PanDryWeight, Comments)
 Biota_ranges <- filter(SedimentTrap1, NumDrills < 0 | NumDrills > 8 | NumCrabs < 0 | NumCrabs > 5 | NumHermitCrabs < 0 | NumHermitCrabs > 30 | NumFish < 0 | NumFish > 3 | NumOtherBiota < 0 | NumOtherBiota > 20) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, NumDrills, NumCrabs, NumHermitCrabs, NumFish, NumOtherBiota, Comments)
@@ -485,7 +485,7 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(Tare_ranges) > 0) {kable(Tare_ranges, caption = "Out of range Tare data. Expected range for filters is 0 to 3.50 grams. Expected range for pans is 0 to 400.00 grams. Comment required for out of range values.")}`
 
-`r if (nrow(Dry_ranges) > 0) {kable(Dry_ranges, caption = "Out of range Dry data. Expected range for dry filters is FilterTare to 12.00 grams. Expected range for dry pans is PanTare to 600.00 grams. Comment required for out of range values.")}`
+`r if (nrow(Dry_ranges) > 0) {kable(Dry_ranges, caption = "Out of range Dry data. Expected range for dry filters is FilterTare to 12.50 grams. Expected range for dry pans is PanTare to 600.00 grams. Comment required for out of range values.")}`
 
 `r if (nrow(Biota_ranges) > 0) {kable(Biota_ranges, caption = "Out of range Biota data. Expected range for Drills is 0 to 8. Expected range for Crabs is 0 to 5. Expected range for Hermit Crabs is 0 to 30. Expected range for Fish is 0 to 3. Expected range for OtherBiota is 0 to 20. Comment required for out of range values.")}`
 

@@ -8,10 +8,10 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
 CheckStart <- as.Date("2024-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-04-30")  # End Date for Checks
+CheckEnd <- as.Date("2024-05-30")  # End Date for Checks
 EstuaryCode = "TB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-05-15"
+Database = "Oysters_24-05-30_test"
 
 Server = "localhost\\ERICALOCALSQL"
 ```
@@ -356,9 +356,11 @@ TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 Recruitment1$Comments <- ifelse(nchar(Recruitment1$Comments) == 0, NA, Recruitment1$Comments) 
-null_Recs <- filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
+null_Recs <- if(EstuaryCode == "CR") {filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 11) %>% filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments)
+  } else {
+    filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
   filter(is.na(NumBottom) & is.na(Comments)) %>%
-  select(TripDate, DeployedDate, StationNumber, ShellReplicate, ShellPosition, NumBottom, Comments)
+  select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments)}
 
   # Out of range values
 Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
