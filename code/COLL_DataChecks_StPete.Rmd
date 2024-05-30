@@ -397,25 +397,26 @@ null_SampleEvents <- filter(SampleEvent1, is.na(FixedLon) & (is.na(LatitudeDec) 
 
   # Out of range values - not needed for St Pete data currently since station locations are checked in MGID checks.
 SampleEvent_range <- NULL
-# Flags SampleEvents that occur over 1,852 meters (1 nautical mile) from the assigned FixedLocation.  
+# Flags SampleEvents that occur over 125 meters (1 nautical mile) from the assigned FixedLocation.  
 #SampleEvent1 %>% rowwise() %>% mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>%
 #  filter(DistFromFixed > 1852) %>% select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed, Comments)
   
 ## Water Quality #
   # Unexpected Null values
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth)) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth) | is.na(PercentDissolvedOxygen)) %>%
+    filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), Comments)) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
   # Out of range values
 Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
-Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 35) %>%
+Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
 DO_range <- SampleEventWQ1 %>% 
   mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
-  filter(DO.Sat < 0.50 | DO.Sat > 1.20) %>%
+  filter(DO.Sat < 0.50 | DO.Sat > 1.50) %>%
   mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, DO.Sat, Comments)
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, PercentDissolvedOxygen,  DO.Sat, Comments)
 pH_range <- filter(SampleEventWQ1, pH < 7.0 | pH > 8.5) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, pH, Comments)
 Depth_range <- filter(SampleEventWQ1, Depth < 0 | Depth > 3.5) %>%
@@ -559,7 +560,7 @@ if (nrow(null_Repro) > 0) {
   Mess_null_Repro = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(SampleEvent_range) > 0) {
+if (length(SampleEvent_range) == 0) {
   MessSampleEvent_ranges = ""
 } else {
   MessSampleEvent_ranges = "Congratulations! No out of range values detected."
@@ -595,7 +596,7 @@ These data checks were run on trips occurring between
 by <p2>`r DataManager`</p2> on
 <p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
 
-`r kable(TripInfo2, caption = "Data from these trips is included in these checks")`
+`r kable(TripInfo2,  longtable = TRUE, caption = "Data from these trips is included in these checks")`
 
 <h2>Database Errors:</h2>
 
@@ -675,7 +676,8 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessSampleEvent_ranges`</p2>
 
-`r if (nrow(SampleEvent_range) > 0) {kable(SampleEvent_range, caption = "Out of range distance from Fixed Location. Expected range is 1,852 meters (1 nautical mile). Comment required for out of range values.")}`
+`r if (length(SampleEvent_range) == 0) {kable(SampleEvent_range, caption = "If distance from Fixed Location needs to be checked, update code for SampleEvent_range.")}`
+`r if (length(SampleEvent_range) > 0) {kable(SampleEvent_range, caption = "Out of range distance from Fixed Location. Expected range is 125 meters. Comment required for out of range values.")}`
 
 <h4>--- Water Quality ---</h4>
 
