@@ -484,7 +484,7 @@ CI_range2 <- CI1 %>%
         ((TotalWeight + TarePanWeight) * 0.4) ~ paste(ErrorCode, "C"),
       TRUE ~ ErrorCode),
     ErrorCode = case_when(
-      ShellWetWeight < (TotalWeight * 0.65) | ShellWetWeight > (TotalWeight * 0.99) ~ paste(ErrorCode, "D"),
+      ShellWetWeight < (TotalWeight * 0.60) | ShellWetWeight > (TotalWeight * 0.99) ~ paste(ErrorCode, "D"),
       TRUE ~ ErrorCode),
     ErrorCode = case_when(
       TissueDryWeight < TarePanWeight | TissueDryWeight > (TissueWetWeight * 0.9) ~ paste(ErrorCode, "E"),
@@ -496,7 +496,7 @@ CI_range2 <- CI1 %>%
   mutate(ErrorCode = sub("NA ", "", ErrorCode)) %>%
   rename(TotalWt = TotalWeight, TarePanWt = TarePanWeight, TissueWetWt = TissueWetWeight, ShellWetWt = ShellWetWeight, TissueDryWt = TissueDryWeight, ShellDryWt = ShellDryWeight) %>%
   select(OysterID, TotalWt, TarePanWt, TissueWetWt, ShellWetWt, TissueDryWt, ShellDryWt, ErrorCode, Comments)
-CI_range2caption <- "Out of range Condition data. Comment required for out of range values. <br>(A) Expected range for TotalWeight is 80% to 100% of the sum of TissueWetWeight and ShellWetWeight minus TarePanWeight. <br>(B) Expected range for TarePanWeight is 0.9 to 5.0 g. <br>(C) Expected range for TissueWetWeight is 5% to 40% of the sum of TotalWeight and TarePanWeight. <br>(D) Expected range for ShellWetWeight is 65% to 99% of TotalWeight. <br>(E) Expected range for TissueDryWeight is greater than TarePanWeight and up to 90% of TissueWetWeight. <br>(F) Expected range for ShellDryWeight is 80% to 100% of ShellWetWeight."
+CI_range2caption <- "Out of range Condition data. Comment required for out of range values. <br>(A) Expected range for TotalWeight is 80% to 100% of the sum of TissueWetWeight and ShellWetWeight minus TarePanWeight. <br>(B) Expected range for TarePanWeight is 0.9 to 5.0 g. <br>(C) Expected range for TissueWetWeight is 5% to 40% of the sum of TotalWeight and TarePanWeight. <br>(D) Expected range for ShellWetWeight is 60% to 99% of TotalWeight. <br>(E) Expected range for TissueDryWeight is greater than TarePanWeight and up to 90% of TissueWetWeight. <br>(F) Expected range for ShellDryWeight is 80% to 100% of ShellWetWeight."
 
 ## Dermo #
   # Unexpected Null values
@@ -513,7 +513,7 @@ Dermo_range <- Dermo1 %>%
       TotalWeight < 10 | TotalWeight > 250 ~ paste(ErrorCode, "D"),
       TRUE ~ ErrorCode),
     ErrorCode = case_when(
-      ShellWetWeight < (TotalWeight * 0.65) | ShellWetWeight > (TotalWeight * 0.99) ~ paste(ErrorCode, "E"),
+      ShellWetWeight < (TotalWeight * 0.60) | ShellWetWeight > (TotalWeight * 0.99) ~ paste(ErrorCode, "E"),
       TRUE ~ ErrorCode),
     ErrorCode = case_when(
       DermoMantle < 0 | DermoMantle > 5 | DermoGill < 0 | DermoGill > 5 ~ paste(ErrorCode, "F"),
@@ -523,7 +523,7 @@ Dermo_range <- Dermo1 %>%
   rename(Height = ShellHeight, Length = ShellLength, Width = ShellWidth, TotalWt = TotalWeight, ShellWetWt = ShellWetWeight, ERR = ErrorCode) %>%
   select(OysterID, Height, Length, Width, TotalWt, ShellWetWt, DermoMantle, DermoGill, ERR, Comments)
 
-Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(D)Expected range for TotalWeight is 10 to 250 g. <br>(E)Expected range for ShellWetWeight is 65% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
+Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(D)Expected range for TotalWeight is 10 to 250 g. <br>(E)Expected range for ShellWetWeight is 60% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
 
 ## Repro #
   # Unexpected Null values
@@ -613,7 +613,7 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
 
-`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present.")}`
+`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present. *Primary keys will be Childless until data is proofed.*")}`
 
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
