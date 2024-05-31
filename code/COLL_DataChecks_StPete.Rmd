@@ -8,11 +8,11 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-02-28")  # End Date for Checks
+CheckStart <- as.Date("2024-04-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-05-31")  # End Date for Checks
 EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-05-30_test"
+Database = "Oysters_24-05-31_test"
 Server = "localhost\\ERICALOCALSQL"
 ```
 
@@ -126,11 +126,7 @@ FixedLocations1 <- dboFixedLocations %>%
   distinct()
           
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  arrange(TripID)
-
-TripInfo2 <- TripInfo1 %>%
-  select(TripID, TripDate, Comments) %>%
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL") %>%
   arrange(TripID)
 
 SampleEvent1 <- dboSampleEvent %>% 
@@ -147,29 +143,46 @@ SampleEventWQ1 <- dboSampleEventWQ %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
-CI1 <- dboCI %>% 
+#Get all CI data to check data status, then limit to proofed data for datachecks
+CI_t <- dboCI %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
   left_join(FixedLocations1, CI1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
+CI1 <- CI_t %>% filter(DataStatus == "Proofed")
 
-Dermo1 <- dboDermo %>% 
+#Get all Dermo data to check data status, then limit to proofed data for datachecks
+Dermo_t <- dboDermo %>%
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22),
          DermoMantle = as.numeric(DermoMantle),
          DermoGill = as.numeric(DermoGill)) %>% 
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
   left_join(FixedLocations1, Dermo1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
+Dermo1 <- Dermo_t %>% filter(DataStatus == "Proofed")
 
-Repro1 <- dboRepro %>% 
+#Get all Repro data to check data status, then limit to proofed data for datachecks
+Repro_t <- dboRepro %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>% 
   filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, Repro1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
+Repro1 <- Repro_t %>% filter(DataStatus == "Proofed")
 
+#Combine data types and status with TripInfo
+TripInfo2 <- left_join(left_join(left_join(TripInfo1 %>%
+  select(TripID, TripDate, DataStatus, Comments) %>% arrange(TripID),
+CI_t %>% mutate(TripID = substring(SampleEventID, 1, 17)) %>% subset(TripID %in% TripInfo1$TripID) %>%
+  group_by(TripID, DataStatus) %>% summarise(Count = n()) %>% pivot_wider(names_from = DataStatus, names_glue = "C_{DataStatus}", values_from = Count)),
+Dermo_t %>% mutate(TripID = substring(SampleEventID, 1, 17)) %>% subset(TripID %in% TripInfo1$TripID) %>%
+  group_by(TripID, DataStatus) %>% summarise(Count = n()) %>% pivot_wider(names_from = DataStatus, names_glue = "D_{DataStatus}", values_from = Count)),
+Repro_t %>% mutate(TripID = substring(SampleEventID, 1, 17)) %>% subset(TripID %in% TripInfo1$TripID) %>%
+  group_by(TripID, DataStatus) %>% summarise(Count = n()) %>% pivot_wider(names_from = DataStatus, names_glue = "R_{DataStatus}", values_from = Count))
+
+#"Historic" data
 hsdbTripInfo <- hsdbTripInfo %>% 
   filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL")  %>%
   arrange(TripID)
@@ -311,7 +324,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- distinct(ERR_Table3) 
+ERR_Table3 <- distinct(ERR_Table3) %>% mutate(Table = substring(Table, 13)) %>% table() %>% as.data.frame() %>% pivot_wider(id_cols = ChildlessPrimaryKey, names_from = Table, values_from = Freq)
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
@@ -487,8 +500,8 @@ CI_range2caption <- "Out of range Condition data. Comment required for out of ra
 
 ## Dermo #
   # Unexpected Null values
-null_Dermo <- filter(Dermo1, is.na(ShellHeight) | is.na(ShellLength) | is.na(ShellWidth) | is.na(TotalWeight) | is.na(ShellWetWeight) | is.na(DermoMantle) | is.na(DermoGill)) %>%
-  select(OysterID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, Comments)
+null_Dermo <- filter(Dermo1, is.na(ShellHeight) | is.na(TotalWeight) | is.na(ShellWetWeight) | is.na(DermoMantle) | is.na(DermoGill)) %>%
+  select(OysterID, ShellHeight, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, Comments)
 
   # Out of range values
 Dermo_range <- Dermo1 %>%
@@ -496,12 +509,6 @@ Dermo_range <- Dermo1 %>%
     ErrorCode = case_when(
       ShellHeight < 10 | ShellHeight > 150 ~ "A",
       TRUE ~ NA_character_),
-    ErrorCode = case_when(
-      ShellLength < 20 | ShellLength > 90 | ShellLength > ShellHeight ~ paste(ErrorCode, "B"),
-      TRUE ~ ErrorCode),
-    ErrorCode = case_when(
-      ShellWidth < 8 | ShellWidth > 50 | ShellWidth > ShellLength ~ paste(ErrorCode, "C"),
-      TRUE ~ ErrorCode),
     ErrorCode = case_when(
       TotalWeight < 10 | TotalWeight > 250 ~ paste(ErrorCode, "D"),
       TRUE ~ ErrorCode),
@@ -516,7 +523,7 @@ Dermo_range <- Dermo1 %>%
   rename(Height = ShellHeight, Length = ShellLength, Width = ShellWidth, TotalWt = TotalWeight, ShellWetWt = ShellWetWeight, ERR = ErrorCode) %>%
   select(OysterID, Height, Length, Width, TotalWt, ShellWetWt, DermoMantle, DermoGill, ERR, Comments)
 
-Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(B)Expected range for ShellLength is 20 to 90 mm and is less than ShellHeight. <br>(C)Expected range for ShellWidth is 8 to 50 mm and is less than ShellLength. <br>(D)Expected range for TotalWeight is 10 to 250 g. <br>(E)Expected range for ShellWetWeight is 65% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
+Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(D)Expected range for TotalWeight is 10 to 250 g. <br>(E)Expected range for ShellWetWeight is 65% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
 
 ## Repro #
   # Unexpected Null values
