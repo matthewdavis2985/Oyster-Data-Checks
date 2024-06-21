@@ -8,11 +8,11 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-04-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-05-31")  # End Date for Checks
+CheckStart <- as.Date("2023-03-01")  # Start Date for Checks
+CheckEnd <- as.Date("2023-03-31")  # End Date for Checks
 EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-05-31_test"
+Database = "Oysters_24-06-21"
 Server = "localhost\\ERICALOCALSQL"
 ```
 
@@ -163,14 +163,14 @@ Dermo_t <- dboDermo %>%
   arrange(TripDate, StationNumber, OysterID)
 Dermo1 <- Dermo_t %>% filter(DataStatus == "Proofed")
 
-#Get all Repro data to check data status, then limit to proofed data for datachecks
+#Get all Repro data to check data status - don't limit to proofed since Dermo data is checked monthly, Repro checked quarterly
 Repro_t <- dboRepro %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>% 
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
   left_join(FixedLocations1, Repro1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
-Repro1 <- Repro_t %>% filter(DataStatus == "Proofed")
+Repro1 <- Repro_t
 
 #Combine data types and status with TripInfo
 TripInfo2 <- left_join(left_join(left_join(TripInfo1 %>%
@@ -324,7 +324,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- distinct(ERR_Table3) %>% mutate(Table = substring(Table, 13)) %>% table() %>% as.data.frame() %>% pivot_wider(id_cols = ChildlessPrimaryKey, names_from = Table, values_from = Freq)
+ERR_Table3 <- if(length(ERR_Table3) > 0){distinct(ERR_Table3) %>% mutate(Table = substring(Table, 13)) %>% table() %>% as.data.frame() %>% pivot_wider(id_cols = ChildlessPrimaryKey, names_from = Table, values_from = Freq)} else {data.frame()}
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
@@ -408,7 +408,7 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 null_SampleEvents <- filter(SampleEvent1, is.na(FixedLon) & (is.na(LatitudeDec) | is.na(LongitudeDec) | is.na(LatDec) | is.na(LatMin) | is.na(LongDec) | is.na(LongMin))) %>%
   select(SampleEventID, LatitudeDec, LongitudeDec, LatDec, LatMin, LongDec, LongMin, FixedLon, FixedLat, Comments)
 
-  # Out of range values - not needed for St Pete data currently since station locations are checked in MGID checks.
+  # Out of range values - not needed for St Pete data currently since station locations are fixed or checked in MGID checks.
 SampleEvent_range <- NULL
 # Flags SampleEvents that occur over 125 meters (1 nautical mile) from the assigned FixedLocation.  
 #SampleEvent1 %>% rowwise() %>% mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>%
