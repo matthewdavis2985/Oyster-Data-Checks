@@ -8,11 +8,11 @@ knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encod
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-03-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-03-31")  # End Date for Checks
+CheckStart <- as.Date("2024-04-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-05-31")  # End Date for Checks
 EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-06-21"
+Database = "Oysters_24 06 27"
 Server = "localhost\\ERICALOCALSQL"
 ```
 
@@ -324,7 +324,7 @@ for (i in seq_along(sorc)) {
     }
   }
 }
-ERR_Table3 <- if(length(ERR_Table3) > 0){distinct(ERR_Table3) %>% mutate(Table = substring(Table, 13)) %>% table() %>% as.data.frame() %>% pivot_wider(id_cols = ChildlessPrimaryKey, names_from = Table, values_from = Freq)} else {data.frame()}
+ERR_Table3 <- if(length(ERR_Table3) > 0){distinct(ERR_Table3) %>% mutate(Table = gsub("^SampleEvent&", "", Table)) %>% table() %>% as.data.frame() %>% pivot_wider(id_cols = ChildlessPrimaryKey, names_from = Table, values_from = Freq)} else {data.frame()}
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
@@ -430,6 +430,9 @@ DO_range <- SampleEventWQ1 %>%
   filter(DO.Sat < 0.50 | DO.Sat > 1.50) %>%
   mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, PercentDissolvedOxygen,  DO.Sat, Comments)
+DOPct_range <- SampleEventWQ1 %>% 
+  filter(PercentDissolvedOxygen < 20 | PercentDissolvedOxygen > 150) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, PercentDissolvedOxygen, Comments)
 pH_range <- filter(SampleEventWQ1, pH < 7.0 | pH > 8.5) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, pH, Comments)
 Depth_range <- filter(SampleEventWQ1, Depth < 0 | Depth > 3.5) %>%
