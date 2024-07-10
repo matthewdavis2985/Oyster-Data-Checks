@@ -326,7 +326,7 @@ SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(Sam
 SurveyQuadrat_nulls <- filter(SurveyQuadrat1, is.na(QuadratID) | is.na(SampleEventID) | is.na(QuadratNumber) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
   select(QuadratID, SampleEventID, QuadratNumber, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
 
-SurveySH_nulls <- filter(SurveySH1, is.na(QuadratID) | is.na(QuadratID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+SurveySH_nulls <- filter(SurveySH1, is.na(ShellHeightID) | is.na(QuadratID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
   select(ShellHeightID, QuadratID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
 
 # Remove unneeded data frames and values
