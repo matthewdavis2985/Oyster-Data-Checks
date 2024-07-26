@@ -39,7 +39,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```{css}
 /* Sets the fonts for the RMarkdown output */
 p {
-font-size: 8pt;
+font-size: 10pt;
 }
 
 p2 {
@@ -47,22 +47,22 @@ font-weight: bold;
 }
 
 h1 {
-font-size: 18pt;
+font-size: 19pt;
 font-weight: bold;
 }
 
 h2 {
-font-size: 14pt;
+font-size: 15pt;
 font-weight: bold;
 }
 
 h3 {
-font-size: 12pt;
+font-size: 13pt;
 font-style: italic;
 }
 
 h4 {
-font-size: 10pt;
+font-size: 11pt;
 text-indent: 5%;
 font-weight: bold;
 }
