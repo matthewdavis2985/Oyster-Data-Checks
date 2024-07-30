@@ -2,17 +2,16 @@
 title: "Cage Data Checks"
 output:
   html_document:
-knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encoding = encoding, output_file = paste0(substr(inputFile, 1, nchar(inputFile)-4), "_", Sys.Date(), '.html')) })
 params:
     Sites: ["CR", "SL", "LX"]
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-04-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-06-30")  # End Date for Checks
+CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-07-30")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-07-10"
+Database = "Oysters_24-07-30"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
