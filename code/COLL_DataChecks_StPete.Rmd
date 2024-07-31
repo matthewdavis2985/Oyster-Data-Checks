@@ -79,7 +79,7 @@ con <- dbConnect(odbc(),
 
 dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
   collect() %>% 
-  filter(Estuary == EstuaryCode)
+  filter(Estuary %in% EstuaryCode)
 
 hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
   collect() 

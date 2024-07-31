@@ -466,7 +466,7 @@ for(i in list(EstuaryCode)) {
 
 These data checks were run on trips occurring between
 <p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
-for the site(s) <p> `r EstuaryCode` </p2>\
+for the site(s) <p2> `r EstuaryCode` </p2>\
 by <p2>`r DataManager`</p2> on
 <p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
 
