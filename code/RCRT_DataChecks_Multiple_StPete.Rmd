@@ -2,7 +2,6 @@
 title: "Recruitment Data Checks"
 output:
   html_document:
-knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encoding = encoding, output_file = paste0(substr(inputFile, 1, nchar(inputFile)-4), "_", Sys.Date(), '.html')) })
 params:
     CERP: ["SL", "LX", "LW", "CR"] 
     PBC: "LW"
@@ -11,10 +10,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-05-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-05-30")  # End Date for Checks
+CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-07-31")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-07-26"
+Database = "Oysters_24-07-31"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = c(params$CERP, params$PBC)  #params$[project] or use 2-letter code in Primary Keys for single estuary
@@ -331,7 +330,7 @@ null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
   # Out of range values
-Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 34) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
@@ -404,6 +403,12 @@ if (nrow(Days_range) > 0 & nrow(Spat_range) > 0) {
 } else {
   MessRec_ranges = "Congratulations! No out of range values detected."
 }
+
+#List of stored procedure lines
+for(i in list(EstuaryCode)) {
+  checks <- NULL
+  checks[i] <- paste0("EXECUTE [dbo].[spChecksRecruitment] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
+  }
 ```
 
 These data checks were run on trips occurring between
@@ -462,7 +467,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessWQ_ranges`</p2>
 
-`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 34.0°C. Comment required for out of range values.")}`
 
 `r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
 
@@ -500,11 +505,7 @@ data from the dbo schema.
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
-EXECUTE [dbo].[spChecksRecruitment]
-	@CheckStart = \'`r CheckStart`\',
-	@CheckEnd = \'`r CheckEnd`\',
-	@EstuaryCode = \'`r EstuaryCode`\',
-	@DataManager = \'`r DataManager`\';
+`r paste(checks, collapse = "<br>")`
 
 `r knit_exit()`
 

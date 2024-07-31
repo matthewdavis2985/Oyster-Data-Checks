@@ -2,16 +2,15 @@
 title: "Sediment Trap Data Checks"
 output:
   html_document:
-    knit: (function(inputFile, encoding) {rmarkdown::render(input = inputFile, encoding = encoding, output_file = paste0(substr(inputFile, 1, nchar(inputFile)-4), "_", Sys.Date(), '.html')) })
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-04-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-05-31")  # End Date for Checks
-EstuaryCode = "TB"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-07-31")  # End Date for Checks
+EstuaryCode = "LW"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-05-30_test"
+Database = "Oysters_24-07-31"
 Server = "localhost\\ERICALOCALSQL"
 ```
 
@@ -33,7 +32,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```{css}
 /* Sets the fonts for the RMarkdown output */
 p {
-font-size: 8pt;
+font-size: 10pt;
 }
 
 p2 {
@@ -41,22 +40,22 @@ font-weight: bold;
 }
 
 h1 {
-font-size: 18pt;
+font-size: 19pt;
 font-weight: bold;
 }
 
 h2 {
-font-size: 14pt;
+font-size: 15pt;
 font-weight: bold;
 }
 
 h3 {
-font-size: 12pt;
+font-size: 13pt;
 font-style: italic;
 }
 
 h4 {
-font-size: 10pt;
+font-size: 11pt;
 text-indent: 5%;
 font-weight: bold;
 }
@@ -329,7 +328,7 @@ null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, pH, Comments)
 
   # Out of range values
-Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 34) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
@@ -461,7 +460,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessWQ_ranges`</p2>
 
-`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 34.0°C. Comment required for out of range values.")}`
 
 `r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 38.0 ppt. Comment required for out of range values.")}`
 

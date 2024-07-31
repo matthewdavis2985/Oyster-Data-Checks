@@ -14,7 +14,7 @@ params:
 CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
 CheckEnd <- as.Date("2024-07-30")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-07-30"
+Database = "Oysters_24-07-31"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = c(params$CERP, params$PBC)  #params$[project] or use 2-letter code in Primary Keys for single estuary
@@ -426,7 +426,7 @@ null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
   # Out of range values
-Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 34) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
@@ -503,7 +503,7 @@ CI_range2 <- CI1 %>%
   filter(!is.na(ErrorCode)) %>%
   mutate(ErrorCode = sub("NA ", "", ErrorCode)) %>%
   rename(TotalWt = TotalWeight, TarePanWt = TarePanWeight, TissueWetWt = TissueWetWeight, ShellWetWt = ShellWetWeight, TissueDryWt = TissueDryWeight, ShellDryWt = ShellDryWeight) %>%
-  select(OysterID, TotalWt, TarePanWt, TissueWetWt, ShellWetWt, TissueDryWt, ShellDryWt, ErrorCode, Comments)
+  select(OysterID, TotalWt, TarePanWt, TissueWetWt, ShellWetWt, TissueDryWt, ShellDryWt, ErrorCode, Comments) %>% arrange(OysterID)
 CI_range2caption <- "Out of range Condition data. Comment required for out of range values. <br>(A) Expected range for TotalWeight is 80% to 100% of the sum of TissueWetWeight and ShellWetWeight minus TarePanWeight. <br>(B) Expected range for TarePanWeight is 0.9 to 5.0 g. <br>(C) Expected range for TissueWetWeight is 5% to 40% of the sum of TotalWeight and TarePanWeight. <br>(D) Expected range for ShellWetWeight is 60% to 99% of TotalWeight. <br>(E) Expected range for TissueDryWeight is greater than TarePanWeight and up to 90% of TissueWetWeight. <br>(F) Expected range for ShellDryWeight is 80% to 100% of ShellWetWeight."
 
 ## Dermo #
@@ -518,7 +518,7 @@ Dermo_range <- Dermo1 %>%
       ShellHeight < 10 | ShellHeight > 150 ~ "A",
       TRUE ~ NA_character_),
     ErrorCode = case_when(
-      TotalWeight < 10 | TotalWeight > 250 ~ paste(ErrorCode, "D"),
+      TotalWeight < 6 | TotalWeight > 250 ~ paste(ErrorCode, "D"),
       TRUE ~ ErrorCode),
     ErrorCode = case_when(
       ShellWetWeight < (TotalWeight * 0.60) | ShellWetWeight > (TotalWeight * 0.99) ~ paste(ErrorCode, "E"),
@@ -531,7 +531,7 @@ Dermo_range <- Dermo1 %>%
   rename(Height = ShellHeight, Length = ShellLength, Width = ShellWidth, TotalWt = TotalWeight, ShellWetWt = ShellWetWeight, ERR = ErrorCode) %>%
   select(OysterID, Height, Length, Width, TotalWt, ShellWetWt, DermoMantle, DermoGill, ERR, Comments)
 
-Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(D)Expected range for TotalWeight is 10 to 250 g. <br>(E)Expected range for ShellWetWeight is 60% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
+Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(D)Expected range for TotalWeight is 6 to 250 g. <br>(E)Expected range for ShellWetWeight is 60% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
 
 ## Repro #
   # Unexpected Null values
@@ -604,6 +604,12 @@ if (nrow(Repro_range) > 0) {
 } else {
   MessRepro_ranges = "Congratulations! No out of range values detected."
 }
+
+#List of stored procedure lines
+for(i in list(EstuaryCode)) {
+  checks <- NULL
+  checks[i] <- paste0("EXECUTE [dbo].[spChecksCollections] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
+  }
 ```
 
 These data checks were run on trips occurring between
@@ -622,7 +628,7 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
 
-`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present. *Primary keys will be Childless until data is proofed.*")}`
+`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present. *Primary keys will be Childless until data is proofed. Primary keys will also be Childless if an unfinsihed trip is present and no data is entered (i.e. dermo entered, no CI collected).*")}`
 
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
@@ -699,7 +705,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessWQ_ranges`</p2>
 
-`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 34.0°C. Comment required for out of range values.")}`
 
 `r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
 
@@ -746,11 +752,7 @@ data from the dbo schema.
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
-EXECUTE [dbo].[spChecksCollections]
-	@CheckStart = \'`r CheckStart`\',
-	@CheckEnd = \'`r CheckEnd`\',
-	@EstuaryCode = \'`r EstuaryCode`\',
-	@DataManager = \'`r DataManager`\';
+`r paste(checks, collapse = "<br>")`
 
 `r knit_exit()`
 
