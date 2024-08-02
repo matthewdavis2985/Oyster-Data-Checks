@@ -11,10 +11,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-07-30")  # End Date for Checks
+CheckStart <- as.Date("2024-06-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-06-30")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-07-31"
+Database = "Oysters_24-08-01"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = c(params$CERP, params$PBC)  #params$[project] or use 2-letter code in Primary Keys for single estuary
@@ -616,7 +616,7 @@ These data checks were run on trips occurring between
 <p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
 from the site(s) <p2> `r EstuaryCode` </p2>\
 by <p2>`r DataManager`</p2> on
-<p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
+<p2>`r format(Sys.Date(), "%d-%B-%Y")`</p2> using database <p2> `r Database`</p2>.
 
 `r kable(TripInfo2,  longtable = TRUE, caption = "Data from these trips is included in these checks")`
 
@@ -638,17 +638,17 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table4c) > 0) {kable(ERR_Table4c, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
-`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. Status of collection trips. Trips will not show as proofed unless data is entered/proofed and trip is finished.")}`
 
 `r if (nrow(SampleEvent_nulls) > 0) {kable(SampleEvent_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "WQ Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(ConditionIndex_nulls) > 0) {kable(ConditionIndex_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(ConditionIndex_nulls) > 0) {kable(ConditionIndex_nulls, caption = "CI Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(Dermo_nulls) > 0) {kable(Dermo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(Dermo_nulls) > 0) {kable(Dermo_nulls, caption = "Dermo Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(Repro_nulls) > 0) {kable(Repro_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(Repro_nulls) > 0) {kable(Repro_nulls, caption = "Repro Critical Nulls. These fields MUST contain data!")}`
 
 <h2>Data Errors:</h2>
 

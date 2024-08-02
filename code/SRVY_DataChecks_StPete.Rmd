@@ -3,7 +3,7 @@ title: "Survey Data Checks"
 output:
   html_document:
 params:
-    Sites: ["TB"] #CR must be run seperately due to CERP & TIG sampling
+    Sites: ["CR"] #CR must be run seperately due to CERP & TIG sampling
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
@@ -11,7 +11,7 @@ params:
 CheckStart <- as.Date("2024-06-01")  # Start Date for Checks
 CheckEnd <- as.Date("2024-07-30")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-07-31"
+Database = "Oysters_24-08-01"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
@@ -543,7 +543,7 @@ if (nrow(SurveySH_range) > 0 | nrow(SHMismatch) > 0) {
 #List of stored procedure lines
 for(i in list(EstuaryCode)) {
   checks <- NULL
-  checks[i] <- paste0("EXECUTE [dbo].[spChecksCage] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
+  checks[i] <- paste0("EXECUTE [dbo].[spChecksSurvey] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
   }
 ```
 
