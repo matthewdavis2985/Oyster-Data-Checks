@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-04-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-06-30")  # End Date for Checks
-EstuaryCode = "LX"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2024-08-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-08-30")  # End Date for Checks
+EstuaryCode = "CR"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-07-10"
+Database = "Oysters_24-08-28"
 
 Server = "localhost\\ERICALOCALSQL"
 ```
@@ -123,11 +123,11 @@ hsdbTripInfo <- hsdbTripInfo %>%
   arrange(TripID)
 
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & grepl("Cage", TripType) & DataStatus == "Proofed") %>%
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & grepl("Cage", TripType)) %>%
   arrange(TripID)
 
 TripInfo2 <- TripInfo1 %>%
-  select(TripID, TripDate, Comments) %>%
+  select(TripID, TripDate, DataStatus, Comments) %>%
   arrange(TripID)
 
 hsdbSampleEvent <- hsdbSampleEvent %>% 
