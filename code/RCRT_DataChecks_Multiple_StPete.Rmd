@@ -2,17 +2,22 @@
 title: "Recruitment Data Checks"
 output:
   html_document:
+params:
+    CERP: ["SL", "LX", "LW", "CR"] 
+    PBC: "LW"
+    TIG: ["TB", "CR"]
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-06-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-07-30")  # End Date for Checks
-EstuaryCode = "TB"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-07-31")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-08-01"
-
+Database = "Oysters_24-07-31"
 Server = "localhost\\ERICALOCALSQL"
+
+EstuaryCode = c(params$CERP, params$PBC)  #params$[project] or use 2-letter code in Primary Keys for single estuary
+
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -33,7 +38,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```{css}
 /* Sets the fonts for the RMarkdown output */
 p {
-font-size: 8pt;
+font-size: 10pt;
 }
 
 p2 {
@@ -41,22 +46,22 @@ font-weight: bold;
 }
 
 h1 {
-font-size: 18pt;
+font-size: 19pt;
 font-weight: bold;
 }
 
 h2 {
-font-size: 14pt;
+font-size: 15pt;
 font-weight: bold;
 }
 
 h3 {
-font-size: 12pt;
+font-size: 13pt;
 font-style: italic;
 }
 
 h4 {
-font-size: 10pt;
+font-size: 11pt;
 text-indent: 5%;
 font-weight: bold;
 }
@@ -72,7 +77,7 @@ con <- dbConnect(odbc(),
 
 dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
   collect() %>% 
-  filter(Estuary == EstuaryCode)
+  filter(Estuary %in% EstuaryCode)
 
 hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
   collect() 
@@ -113,7 +118,7 @@ FixedLocations1 <- dboFixedLocations %>%
   distinct()
           
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment" & DataStatus == "Proofed") %>%
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment" & DataStatus == "Proofed") %>%
   arrange(TripID)
 
 TripInfo2 <- TripInfo1 %>%
@@ -123,14 +128,14 @@ TripInfo2 <- TripInfo1 %>%
 SampleEvent1 <- dboSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber)
 
 SampleEventWQ1 <- dboSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
@@ -138,28 +143,28 @@ Recruitment1 <- dboRecruitment %>%
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(ShellID, 19, 22),
          NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, Recruitment1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, ShellID) %>%
   filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
 
 hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment")  %>%
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment")  %>%
   arrange(TripID)
 
 hsdbSampleEvent <- hsdbSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
   arrange(TripDate)
 
 hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT") %>%
   arrange(TripDate)
 
 hsdbRecruitment <- hsdbRecruitment %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
   arrange(TripDate)
 
 ```
@@ -325,7 +330,7 @@ null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
   # Out of range values
-Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 34) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
@@ -355,7 +360,10 @@ TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 Recruitment1$Comments <- ifelse(nchar(Recruitment1$Comments) == 0, NA, Recruitment1$Comments) 
-null_Recs <- if(EstuaryCode == "CR") {filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 11) %>% filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments)
+null_Recs <- if("CR" %in% EstuaryCode) {rbind(filter(Recruitment1, Estuary == "CR" & ShellPosition >= 2 & ShellPosition <= 11) %>% filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments),
+                                              filter(Recruitment1, Estuary != "CR" & ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
+  filter(is.na(NumBottom) & is.na(Comments)) %>%
+  select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments))
   } else {
     filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
   filter(is.na(NumBottom) & is.na(Comments)) %>%
@@ -395,10 +403,17 @@ if (nrow(Days_range) > 0 & nrow(Spat_range) > 0) {
 } else {
   MessRec_ranges = "Congratulations! No out of range values detected."
 }
+
+#List of stored procedure lines
+for(i in list(EstuaryCode)) {
+  checks <- NULL
+  checks[i] <- paste0("EXECUTE [dbo].[spChecksRecruitment] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
+  }
 ```
 
 These data checks were run on trips occurring between
 <p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
+from the site(s) <p2> `r EstuaryCode` </p2>\
 by <p2>`r DataManager`</p2> on
 <p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
 
@@ -452,7 +467,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessWQ_ranges`</p2>
 
-`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 34.0°C. Comment required for out of range values.")}`
 
 `r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
 
@@ -490,11 +505,7 @@ data from the dbo schema.
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
-EXECUTE [dbo].[spChecksRecruitment]
-	@CheckStart = \'`r CheckStart`\',
-	@CheckEnd = \'`r CheckEnd`\',
-	@EstuaryCode = \'`r EstuaryCode`\',
-	@DataManager = \'`r DataManager`\';
+`r paste(checks, collapse = "<br>")`
 
 `r knit_exit()`
 

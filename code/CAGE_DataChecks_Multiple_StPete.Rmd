@@ -1,18 +1,21 @@
 ---
-title: "Recruitment Data Checks"
+title: "Cage Data Checks"
 output:
   html_document:
+params:
+    Sites: ["CR", "SL", "LX"]
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-06-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-07-30")  # End Date for Checks
-EstuaryCode = "TB"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-07-31")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-08-01"
-
+Database = "Oysters_24-07-31"
 Server = "localhost\\ERICALOCALSQL"
+
+EstuaryCode = params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
+
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -33,7 +36,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```{css}
 /* Sets the fonts for the RMarkdown output */
 p {
-font-size: 8pt;
+font-size: 10pt;
 }
 
 p2 {
@@ -41,22 +44,22 @@ font-weight: bold;
 }
 
 h1 {
-font-size: 18pt;
+font-size: 19pt;
 font-weight: bold;
 }
 
 h2 {
-font-size: 14pt;
+font-size: 15pt;
 font-weight: bold;
 }
 
 h3 {
-font-size: 12pt;
+font-size: 13pt;
 font-style: italic;
 }
 
 h4 {
-font-size: 10pt;
+font-size: 11pt;
 text-indent: 5%;
 font-weight: bold;
 }
@@ -72,7 +75,7 @@ con <- dbConnect(odbc(),
 
 dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
   collect() %>% 
-  filter(Estuary == EstuaryCode)
+  filter(Estuary %in% EstuaryCode)
 
 hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
   collect() 
@@ -92,10 +95,16 @@ hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
 dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
   collect() 
 
-hsdbRecruitment <- tbl(con,in_schema("hsdb", "Recruitment")) %>%
+hsdbCageCount <- tbl(con,in_schema("hsdb", "CageCount")) %>%
   collect() 
 
-dboRecruitment <- tbl(con,in_schema("dbo", "Recruitment")) %>%
+dboCageCount <- tbl(con,in_schema("dbo", "CageCount")) %>%
+  collect()
+
+hsdbCageSH <- tbl(con,in_schema("hsdb", "CageSH")) %>%
+  collect() 
+
+dboCageSH <- tbl(con,in_schema("dbo", "CageSH")) %>%
   collect()
 
 DBI::dbDisconnect(con)
@@ -103,7 +112,7 @@ DBI::dbDisconnect(con)
 ```
 
 ```{r DataFilters}
-# Filter data frames so that only data collected from Recruitment trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+# Filter data frames so that only data collected from Cage data in the specified Estuary, in the correct date range, which have been Proofed, are present.
 FixedLocations1 <- dboFixedLocations %>% 
   mutate(StationNumber = as.numeric(StationNumber)) %>% 
   select(FixedLocationID,
@@ -112,55 +121,70 @@ FixedLocations1 <- dboFixedLocations %>%
          StationNumber) %>% 
   distinct()
           
+hsdbTripInfo <- hsdbTripInfo %>% 
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & grepl("Cage", TripType))  %>%
+  arrange(TripID)
+
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment" & DataStatus == "Proofed") %>%
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & grepl("Cage", TripType) & DataStatus == "Proofed") %>%
   arrange(TripID)
 
 TripInfo2 <- TripInfo1 %>%
   select(TripID, TripDate, Comments) %>%
   arrange(TripID)
 
+hsdbSampleEvent <- hsdbSampleEvent %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "CAGE") %>%
+  arrange(TripDate)
+
 SampleEvent1 <- dboSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "CAGE" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber)
+
+hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
+  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
+  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "CAGE") %>%
+  arrange(TripDate)
 
 SampleEventWQ1 <- dboSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "CAGE" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
-Recruitment1 <- dboRecruitment %>% 
+hsdbCounts <- hsdbCageCount %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "CAGE") %>%
+  arrange(TripDate)
+
+Counts1 <- dboCageCount %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(ShellID, 19, 22),
-         NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
-  left_join(FixedLocations1, Recruitment1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber, ShellID) %>%
-  filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
+         FixedLocationID = substring(CageCountID, 19, 22),
+         CageID = substring(CageCountID, 28, 28)) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, Counts1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, CageCountID) 
 
-hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment")  %>%
-  arrange(TripID)
 
-hsdbSampleEvent <- hsdbSampleEvent %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
+hsdbSH <- hsdbCageSH %>% 
+  mutate(TripDate = as.Date(substring(CageCountID, 8, 15), format = "%Y%m%d")) %>%
+  filter(substring(CageCountID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(CageCountID,3,6) == "CAGE") %>%
   arrange(TripDate)
 
-hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
-  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT") %>%
-  arrange(TripDate)
-
-hsdbRecruitment <- hsdbRecruitment %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT") %>%
-  arrange(TripDate)
+SH1 <- dboCageSH %>%
+  mutate(TripDate = as.Date(substring(CageCountID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(CageCountID, 19, 22),
+         CageID = substring(CageCountID, 28, 28),
+         DataType = substring(CageCountID, 26, 26),
+         ShellHeight = as.integer(ShellHeight)) %>%
+    filter(substring(CageCountID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, Counts1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, ShellHeightID) 
 
 ```
 
@@ -172,6 +196,7 @@ ERR_Table1a <- data.frame()
 ERR_Table1b <- data.frame()
 ERR_Table1c <- data.frame()
 ERR_Table1d <- data.frame()
+ERR_Table1e <- data.frame()
 
 if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
   ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
@@ -191,18 +216,24 @@ if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
     select(schema, Table, PrimaryKey)
 }
 
-if (nrow(Recruitment1[duplicated(Recruitment1$ShellID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Recruitment", Recruitment1[duplicated(Recruitment1$ShellID), ])) %>% 
+if (nrow(Counts1[duplicated(Counts1$CageCountID), ]) > 0) {
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "CageCounts", Counts1[duplicated(Counts1$CageCountID), ])) %>% 
     mutate(PrimaryKey = ShellID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SH1[duplicated(SH1$ShellHeightID), ]) > 0) {
+  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "CageSHs", SH1[duplicated(SH1$ShellHeightID), ])) %>% 
+    mutate(PrimaryKey = ShellHeightID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are unique in the hsdb schema
 ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Recruitment1$ShellID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbRecruitment$ShellID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "Recruitment")
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Counts1$CageCountID, SH1$ShellHeightID)
+dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbCageCount$CageCountID, hsdbCageSH$ShellHeightID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "CageCounts", "CageSHs")
 
 # Loop through values
 for (i in seq_along(sorc)) {
@@ -216,17 +247,17 @@ for (i in seq_along(sorc)) {
   }
 }
 
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Tablex)
-rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Tablex)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
 
 
 ### DATABASE ERRORS ###
 # Ensure the Foreign Keys are not orphans
 # Create an empty data frame ERR_Table
 ERR_Table2 <- data.frame()
-sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
-dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
-tabl <- list("SampleEvent", "SampleEventWQ", "Recruitment")
+sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Counts1$SampleEventID, SH1$CageCountID)
+dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, Counts1$CageCountID)
+tabl <- list("SampleEvent", "SampleEventWQ", "CageCounts", "CageSHs")
 
 # Loop through SampleEvent$TripID values
 for (i in seq_along(sorc)) {
@@ -244,9 +275,9 @@ ERR_Table2 <- distinct(ERR_Table2)
 ### DATABASE ERRORS ###
 # Ensure the Primary Keys are not childless
 ERR_Table3 <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
-dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEvent")
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, Counts1$CageCountID)
+dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Counts1$SampleEventID, SH1$CageCountID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "CageCounts")
 
 # Loop through SampleEvent$TripID values
 for (i in seq_along(sorc)) {
@@ -259,13 +290,19 @@ for (i in seq_along(sorc)) {
 }
 ERR_Table3 <- distinct(ERR_Table3) 
 
+# Ensure there are 6 cages per SampleEvent for all Sites (3 deployed/3 retrieved)
+# Counts up the number of cages that were made
+ERR_Table3a <- left_join(as.data.frame(table((Counts1 %>% filter(DataType == "Deployed"))$SampleEventID)) %>%  rename("SampleEventID" = "Var1", "Deployed" = "Freq"), 
+                         as.data.frame(table((Counts1 %>% filter(DataType == "Retrieved"))$SampleEventID)) %>%  rename("SampleEventID" = "Var1", "Retrieved" = "Freq")) %>% 
+  filter(Deployed < 3 | Retrieved < 3) %>% merge(Counts1 %>% dplyr::select(SampleEventID, Comments))
+
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
 ERR_Table4 <- data.frame()
-pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Recruitment1$ShellID)
-fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
-tabl <- list("SampleEvent", "SampleEventWQ", "Recruitment")
-numb <- list(17, 24, 24)
+pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Counts1$CageCountID, SH1$ShellHeightID)
+fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Counts1$SampleEventID, SH1$CageCountID)
+tabl <- list("SampleEvent", "SampleEventWQ", "CageCounts", "CageSHs")
+numb <- list(17, 24, 24, 28)
 
 for (i in seq_along(pkid)) {
   for (j in seq_along(fkid[[i]])) {
@@ -288,16 +325,19 @@ SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) |
 SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
   select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
 
-Recruitment_nulls <- filter(Recruitment1, is.na(ShellID) | is.na(SampleEventID) | is.na(DeployedDate) | is.na(ShellReplicate) | is.na(ShellPosition) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(ShellID, SampleEventID, DeployedDate, ShellReplicate, ShellPosition, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+CageCount_nulls <- filter(Counts1, is.na(CageCountID) | is.na(SampleEventID) | is.na(DeployedDate) |is.na(CageColor) | is.na(TotalCount) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+  select(CageCountID, SampleEventID, DeployedDate, CageColor, TotalCount, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+
+CageSH_nulls <- filter(SH1, is.na(ShellHeightID) | is.na(CageCountID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+  select(ShellHeightID, CageCountID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboRecruitment, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbRecruitment, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dboFixedLocations, dboCageCount, dboCageSH, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbCageCount, hsdbCageSH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
-if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(Recruitment_nulls) > 0) {
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table3a) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(CageCount_nulls) > 0 | nrow(CageSH_nulls) > 0) {
   MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
   MessERR_Tables2 = ""
 } else {
@@ -325,7 +365,7 @@ null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
   # Out of range values
-Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 34) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
@@ -350,38 +390,39 @@ TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 
 TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
 
-## Recruitment #
+## Cage Counts #
   # Unexpected Null values
-
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
-Recruitment1$Comments <- ifelse(nchar(Recruitment1$Comments) == 0, NA, Recruitment1$Comments) 
-null_Recs <- if(EstuaryCode == "CR") {filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 11) %>% filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments)
-  } else {
-    filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
-  filter(is.na(NumBottom) & is.na(Comments)) %>%
-  select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments)}
+Counts1$Comments <- ifelse(nchar(Counts1$Comments) == 0, NA, Counts1$Comments) 
+
+null_Counts <- filter(Counts1, is.na(TotalCount) & is.na(Comments)) %>% select(CageCountID, DeployedDate, RetrievedDate, StationNumber, FixedLocationID, CageColor, TotalCount, Comments)
 
   # Out of range values
-Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
-  select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate) %>%
+Days_range <- filter(Counts1, DaysDeployed < 20 | DaysDeployed > 36) %>%
+  select(TripDate, DeployedDate, DaysDeployed, StationNumber, SampleEventID, Comments) %>%
   distinct()
-# Code above reduces the number of records outside of the range by showing only distinct. If you need to view ALL records affected, substitute with the commented out code below.
-# Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
-#   select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate, Comments)
+Count_range <- filter(Counts1, TotalCount > 30 | (TotalCount < 30 & DataType == "Deployed") | (TotalCount < 1 & DataType == "Retrieved")) %>%
+  select(TripDate, DeployedDate, StationNumber, CageColor, TotalCount, SampleEventID, Comments)
 
-Spat_range <- filter(Recruitment1, NumBottom > 200) %>%
-  select(TripDate, DeployedDate, StationNumber, ShellReplicate, ShellPosition, NumBottom, Comments)
-  
+## SurveySH #
+  # Unexpected Null values
+
+SH1$Comments <- ifelse(nchar(SH1$Comments) == 0, NA, SH1$Comments)
+null_SH <- left_join(Counts1, SH1, by = c("CageCountID")) %>%
+  rename("Comments" = "Comments.x") %>%
+  select(ShellHeightID, ShellHeight, TotalCount, Comments) %>%
+  filter(is.na(ShellHeight) & TotalCount != 0) 
+
+SH_range <- filter(SH1, ShellHeight < 1 | ShellHeight > 150) %>%
+  select(ShellHeightID, ShellHeight, Comments) 
+
+
+## Set error messages #
+
 if (nrow(null_WQs) > 0) {
   Mess_null_WQs = ""
 } else {
   Mess_null_WQs = "Congratulations! No unexpected null values detected."
-}
-
-if (nrow(null_Recs) > 0) {
-  Mess_null_Recs = ""
-} else {
-  Mess_null_Recs = "Congratulations! No unexpected null values detected."
 }
 
 if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
@@ -390,15 +431,42 @@ if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_ra
   MessWQ_ranges = "Congratulations! No out of range values detected."
 }
 
-if (nrow(Days_range) > 0 & nrow(Spat_range) > 0) {
+if (nrow(null_Counts) > 0) {
+  Mess_null_Counts = ""
+} else {
+  Mess_null_Counts = "Congratulations! No unexpected null values detected."
+}
+
+
+if (nrow(Days_range) > 0 & nrow(Count_range) > 0) {
   MessRec_ranges = ""
 } else {
   MessRec_ranges = "Congratulations! No out of range values detected."
 }
+
+if (nrow(null_SH) > 0) {
+  Mess_null_SH = ""
+} else {
+  Mess_null_SH = "Congratulations! No unexpected null values detected."
+}
+
+
+if (nrow(SH_range) > 0) {
+  MessCageSH_ranges = ""
+} else {
+  MessCageSH_ranges = "Congratulations! No out of range values detected."
+}
+
+#List of stored procedure lines
+for(i in list(EstuaryCode)) {
+  checks <- NULL
+  checks[i] <- paste0("EXECUTE [dbo].[spChecksCage] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
+  }
 ```
 
 These data checks were run on trips occurring between
 <p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
+for the site(s) <p2> `r EstuaryCode` </p2>\
 by <p2>`r DataManager`</p2> on
 <p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
 
@@ -414,6 +482,8 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! Only exception is on DEPLOY ONLY events.")}`
 
+`r if (nrow(ERR_Table3a) > 0) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 6 total child records unless a valid comment is present.")}`
+
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
 `r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
@@ -422,7 +492,9 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(Recruitment_nulls) > 0) {kable(Recruitment_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(CageCount_nulls) > 0) {kable(CageCount_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(CageSH_nulls) > 0) {kable(CageSH_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
 <h2>Data Errors:</h2>
 
@@ -435,13 +507,19 @@ comment explaining why the data is missing.
 
 <p2>`r Mess_null_WQs`</p2>
 
-`r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment Required for all Null values")}`
+`r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment required for all Null values")}`
 
-<h4>--- Recruitment ---</h4>
+<h4>--- Cage Counts ---</h4>
 
-<p2>`r Mess_null_Recs`</p2>
+<p2>`r Mess_null_Counts`</p2>
 
-`r if (nrow(null_Recs) > 0) {kable(null_Recs, caption = "Null Recruitment Data. Comment Required for all Null values")}`
+`r if (nrow(null_Counts) > 0) {kable(null_Counts, caption = "Null Cage count data. Comment required for all Null values")}`
+
+<h4>--- Cage Shell Heights ---</h4>
+
+<p2>`r Mess_null_SH`</p2>
+
+`r if (nrow(null_SH) > 0) {kable(null_SH, caption = "Null Cage shell height data. Null valules should only be recorded when no oysters were measured. ShellHeightID should end _01 and TotalCount should be 0. A comment may be required.")}`
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
@@ -452,7 +530,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessWQ_ranges`</p2>
 
-`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 34.0°C. Comment required for out of range values.")}`
 
 `r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
 
@@ -471,13 +549,19 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
 
-<h4>--- Recruitment ---</h4>
+<h4>--- Cage Counts ---</h4>
 
 <p2>`r MessRec_ranges`</p2>
 
-`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Confirm out of range values. No comment required.")}`
+`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 20 to 36 days. Confirm out of range values. No comment required.")}`
 
-`r if (nrow(Spat_range) > 0) {kable(Spat_range, caption = "Out of range Spat count data. Expected range is 0 to 50 spat. Comment required for out of range values.")}`
+`r if (nrow(Count_range) > 0) {kable(Count_range, caption = "Out of range Cage count data. Expected range is less than or equal to 30 oysters. Deployed cages should have 30 oysters. Retrieved cages should have 1 to 30 oysters. Comment required for out of range values.")}`
+
+<h4>--- Cage Shell Heights ---</h4>
+
+<p2>`r MessCageSH_ranges`</p2>
+
+`r if (nrow(SH_range) > 0) {kable(SH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
 
 <h2>SQL Code:</h2>
 
@@ -490,11 +574,7 @@ data from the dbo schema.
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
-EXECUTE [dbo].[spChecksRecruitment]
-	@CheckStart = \'`r CheckStart`\',
-	@CheckEnd = \'`r CheckEnd`\',
-	@EstuaryCode = \'`r EstuaryCode`\',
-	@DataManager = \'`r DataManager`\';
+`r paste(checks, collapse = "<br>")`
 
 `r knit_exit()`
 
@@ -504,7 +584,7 @@ EXECUTE [dbo].[spChecksRecruitment]
 -- To do so, copy and paste this code VERBATIM into SSMS
 -- DO NOT RUN THIS CODE WITH R --
 
-CREATE PROCEDURE [dbo].[spChecksRecruitment](
+CREATE PROCEDURE [dbo].[spChecksCage](
 	@CheckStart AS DATE,
 	@CheckEnd AS DATE,
 	@EstuaryCode AS VARCHAR(2),
@@ -528,27 +608,32 @@ BEGIN
 	SELECT TripID
 	FROM TripInfo
 	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
-	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'RCRT%');
+	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'CAGE%');
 
 	-- Query the TripInfo table using the temporary table
-	UPDATE TripInfo 
+	UPDATE dbo.TripInfo 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEvent table using the temporary table
-	UPDATE SampleEvent 
+	UPDATE dbo.SampleEvent 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEventWQ table using the temporary table
-	UPDATE SampleEventWQ 
+	UPDATE dbo.SampleEventWQ 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
-	-- Query the Recruitment table using the temporary table
-	UPDATE Recruitment 
+	-- Query the CageCounts table using the temporary table
+	UPDATE dbo.CageCounts 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+	
+	-- Query the CageSH table using the temporary table
+	UPDATE dbo.CageSH 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE CageCountID IN (SELECT CageCountID FROM CageCount WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
 
 	-- Insert the Completed data into hsdb, and DELETE FROM dbo
 	INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
@@ -563,10 +648,13 @@ BEGIN
 
 	DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
 
-	INSERT INTO hsdb.Recruitment SELECT * FROM Recruitment WHERE DataStatus = 'Completed';
+	INSERT INTO hsdb.CageCount SELECT * FROM CageCount WHERE DataStatus = 'Completed';
 
-	DELETE FROM dbo.Recruitment WHERE DataStatus = 'Completed';
+	DELETE FROM dbo.CageCount WHERE DataStatus = 'Completed';
 
+  INSERT INTO hsdb.CageSH SELECT * FROM CageSH WHERE DataStatus = 'Completed';
+  
+  DELETE FROM dbo.CageSH WHERE DataStatus = 'Completed';
 END
 
 ```
