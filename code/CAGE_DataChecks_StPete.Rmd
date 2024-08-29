@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-08-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-08-30")  # End Date for Checks
-EstuaryCode = "CR"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2023-03-01")  # Start Date for Checks
+CheckEnd <- as.Date("2023-10-30")  # End Date for Checks
+EstuaryCode = "LX"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-08-28"
+Database = "Oysters_24-08-29"
 
 Server = "localhost\\ERICALOCALSQL"
 ```
@@ -167,6 +167,8 @@ Counts1 <- dboCageCount %>%
   left_join(FixedLocations1, Counts1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, CageCountID) 
 
+Counts2 <- Counts1 %>% mutate(TripID = substr(SampleEventID, 1, 17)) %>% 
+  dplyr::select(TripID, DeployedDate) %>% unique()
 
 hsdbSH <- hsdbCageSH %>% 
   mutate(TripDate = as.Date(substring(CageCountID, 8, 15), format = "%Y%m%d")) %>%
@@ -460,7 +462,7 @@ These data checks were run on trips occurring between
 by <p2>`r DataManager`</p2> on
 <p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
 
-`r kable(TripInfo2, caption = "Data from these trips is included in these checks")`
+`r kable(left_join(TripInfo2, Counts2) %>% dplyr::select(TripID:TripDate, DeployedDate, everything()), caption = "Data from these trips is included in these checks")`
 
 <h2>Database Errors:</h2>
 
