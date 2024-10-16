@@ -10,13 +10,13 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-03-30")  # End Date for Checks
+CheckStart <- as.Date("2024-09-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-09-30")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-08-01"
+Database = "Oysters_24-10-02"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = c("TB")  #params$[project] or use 2-letter code in Primary Keys for single estuary
+EstuaryCode = c("CR", "LW")  #params$[project] or use 2-letter code in Primary Keys for single estuary
 
 ```
 
@@ -118,11 +118,11 @@ FixedLocations1 <- dboFixedLocations %>%
   distinct()
           
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Sediment Trap" & DataStatus == "Proofed") %>%
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Sediment Trap") %>%
   arrange(TripID)
 
 TripInfo2 <- TripInfo1 %>%
-  select(TripID, TripDate, Comments) %>%
+  select(TripID, TripDate, DataStatus, Comments) %>%
   arrange(TripID)
 
 SampleEvent1 <- dboSampleEvent %>% 

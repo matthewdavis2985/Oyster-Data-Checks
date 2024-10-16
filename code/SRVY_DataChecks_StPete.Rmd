@@ -3,18 +3,20 @@ title: "Survey Data Checks"
 output:
   html_document:
 params:
-    Sites: ["CR"] #CR must be run seperately due to CERP & TIG sampling
+    EAST: ["SL", "LX", "LW"] 
+    CR: ["CR"]
+    TIG: ["TB"] #CR must be run seperately due to CERP & TIG sampling
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-06-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-07-30")  # End Date for Checks
+CheckStart <- as.Date("2024-08-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-09-30")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-08-01"
+Database = "Oysters_24-10-02"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
+EstuaryCode = params$CR  #params$Sites for multiple or use 2-letter code in Primary Keys for single
 
 ```
 
@@ -290,12 +292,12 @@ ERR_Table3 <- distinct(ERR_Table3)
 
 # Ensure there are 15 quadrats per SampleEvent for all Sites except TB 2023-current
 # Counts up the number of quadrats that were made
-ERR_Table3a <- if(EstuaryCode == "TB" & CheckStart >= as.Date("2023-01-01")){ as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% 
+ERR_Table3a <- if(any(EstuaryCode %in% "TB") & CheckStart >= as.Date("2023-01-01")){as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% 
     rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq") %>% filter(NumOfQuads != 5) %>%
     merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments))
 } else {as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
-  rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq") %>% filter(NumOfQuads != 15) %>%
-    merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments))}
+  rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq")  %>%
+    merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments)) %>% filter(NumOfQuads != 15)}
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
@@ -309,7 +311,7 @@ for (i in seq_along(pkid)) {
   for (j in seq_along(fkid[[i]])) {
     check_fkid <- fkid[[i]][j]
     check_pkid <- substring(pkid[[i]][j],1,numb[[i]])
-    if (check_fkid != check_pkid) {
+    if (check_fkid != check_pkid){
       ERR_Table4 <- rbind(ERR_Table4, data.frame(Table = tabl[[i]], PrimaryKey = pkid[[i]][j], ForeignKey = check_fkid))
     }
   }
@@ -403,7 +405,7 @@ TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 SurveyQuadrat1$Comments <- ifelse(nchar(SurveyQuadrat1$Comments) == 0, NA, SurveyQuadrat1$Comments) 
 
-null_SurveyQuads <- if(EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW") {
+null_SurveyQuads <- if(any(EstuaryCode %in% c("SL", "LX", "LW"))) {
   filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) & !is.na(Comments)) %>%
     select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
   } else if(EstuaryCode %in% "CR") {
@@ -415,7 +417,7 @@ null_SurveyQuads <- if(EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCo
 }
 
   # Out of range values
-SurveyQuad_range <- if(EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW") {
+SurveyQuad_range <- if(any(EstuaryCode %in% c("SL", "LX", "LW"))) {
   filter(SurveyQuadrat1, NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500) %>%
     select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
 } else if (EstuaryCode == "CR"){
@@ -449,12 +451,12 @@ initialSHmeasurement <- filter(SurveySH1, substring(ShellHeightID, 29, 31) == "0
 
 SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
   rename("QuadratID" = "Var1",
-         "NumMeasured" = "Freq") %>%
+         "NumMeasured" = "Freq") %>% mutate(SampleEventID = substr(QuadratID, 1, 24)) %>% left_join(SampleEvent1  %>% mutate(Station = paste0(SectionName, StationNumber)) %>% dplyr::select(SampleEventID, Station)) %>% dplyr::select(-SampleEventID) %>%
   left_join(SurveyQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
   left_join(initialSHmeasurement, by = c("QuadratID")) %>%
-  select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) 
+  select(QuadratID, Station, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) 
 
-if(EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW"){
+if(any(EstuaryCode %in% c("SL", "LX", "LW"))){
   Over10Measured <- SHmeasures %>% filter(NumMeasured > 10) %>% mutate(ErrorColumn = "Over 10 measured")
 } else if(EstuaryCode %in% "CR"){
   Over10Measured <- SHmeasures %>% filter(QuadratNumber < 11 & NumMeasured > 10) %>% mutate(ErrorColumn = "Over 10 measured")
@@ -463,7 +465,7 @@ if(EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW"){
     Over50Measured <- SHmeasures %>% filter(NumMeasured > 50) %>% mutate(ErrorColumn = "Over 50 measured")
     }
 
-if(EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW"){
+if(any(EstuaryCode %in% c("SL", "LX", "LW"))){
   TooManyTooFew <- SHmeasures %>% filter(NumLive != NumMeasured) %>% 
     filter(!(NumLive > 10 & NumMeasured == 10)) %>% 
     filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>%
@@ -480,7 +482,7 @@ if(EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW"){
     mutate(ErrorColumn = "Too many or too few measured")
 }
 
-if(EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW"){
+if(any(EstuaryCode %in% c("SL", "LX", "LW"))){
   SHMismatch <- union(Over10Measured, TooManyTooFew) %>% arrange(QuadratID)
 } else if(EstuaryCode %in% "CR"){
   SHMismatch <- union(Over10Measured, union(Over50Measured, TooManyTooFew)) %>% arrange(QuadratID)
@@ -551,7 +553,7 @@ These data checks were run on trips occurring between
 <p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
 for the site(s) <p2> `r EstuaryCode` </p2>\
 by <p2>`r DataManager`</p2> on
-<p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
+<p2>`r format(Sys.Date(), "%d-%B-%Y")`</p2> using database <p2> `r Database`</p2>.
 
 `r kable(TripInfo2, caption = "Data from these trips is included in these checks")`
 
@@ -565,8 +567,8 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present.")}`
 
-`r if (nrow(ERR_Table3a) > 0 & EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW") {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 15 child records unless a valid comment is present.")}`
-`r if (nrow(ERR_Table3a) > 0 & EstuaryCode %in% "TB") {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 5 child records unless a valid comment is present.")}`
+`r if (nrow(ERR_Table3a) > 0 & any(EstuaryCode %in% c("SL", "LX", "LW"))) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 15 child records unless a valid comment is present.")}`
+`r if (nrow(ERR_Table3a) > 0 & any(EstuaryCode %in% "TB")) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 5 child records unless a valid comment is present.")}`
 
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
@@ -649,7 +651,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessSurveyQuad_ranges`</p2>
 
-`r if (nrow(SurveyQuad_range) > 0 & EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW") {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Comment required for out of range values.")} else {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Expected range for TotalVolume is 0.05 to 5.5 L. Expected range for TotalWeight is 0.10 to 10.00 kg. Comment required for out of range values.")}`
+`r if (nrow(SurveyQuad_range) > 0 & any(EstuaryCode %in% c("SL", "LX", "LW"))) {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Comment required for out of range values.")} else {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Expected range for TotalVolume is 0.05 to 5.5 L. Expected range for TotalWeight is 0.10 to 10.00 kg. Comment required for out of range values.")}`
 
 <h4>--- Survey Shell Heights ---</h4>
 
@@ -657,7 +659,7 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(SurveySH_range) > 0) {kable(SurveySH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
 
-`r if (nrow(SHMismatch) > 0 & EstuaryCode %in% "SL" | EstuaryCode %in% "LX" | EstuaryCode %in% "LW") {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 10 and NumMeasured = 10. Comment required for mismatched values.")} else {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+`r if (nrow(SHMismatch) > 0 & any(EstuaryCode %in% c("SL", "LX", "LW"))) {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 10 and NumMeasured = 10. Comment required for mismatched values.")} else {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
 
 <h2>SQL Code:</h2>
 
