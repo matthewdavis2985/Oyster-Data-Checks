@@ -8,13 +8,13 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-07-31")  # End Date for Checks
+CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-03-31")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-07-31"
+Database = "Oysters_24-10-24"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
+EstuaryCode = "LX" #params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
 
 ```
 
@@ -122,11 +122,11 @@ FixedLocations1 <- dboFixedLocations %>%
   distinct()
           
 hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & grepl("Cage", TripType))  %>%
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "CAGE")  %>%
   arrange(TripID)
 
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & grepl("Cage", TripType) & DataStatus == "Proofed") %>%
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "CAGE" & DataStatus == "Proofed") %>%
   arrange(TripID)
 
 TripInfo2 <- TripInfo1 %>%
