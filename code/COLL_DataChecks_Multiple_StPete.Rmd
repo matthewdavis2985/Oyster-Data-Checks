@@ -258,7 +258,7 @@ if (nrow(Dermo1[duplicated(Dermo1$OysterID), ]) > 0) {
 }
 
 if (nrow(Repro1[duplicated(Repro1$OysterID), ]) > 0) {
-  ERR_Table1f <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Repro", ReproSH1[duplicated(Repro1$OysterID), ])) %>% 
+  ERR_Table1f <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Repro", Repro1[duplicated(Repro1$OysterID), ])) %>% 
     mutate(PrimaryKey = OysterID) %>%
     select(schema, Table, PrimaryKey)
 }
