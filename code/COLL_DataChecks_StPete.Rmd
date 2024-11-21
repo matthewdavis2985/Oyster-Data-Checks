@@ -3,22 +3,16 @@ title: "Collections Data Checks"
 subtitle: "Condition Index, Dermo, and Repro"
 output:
   html_document:
-params:
-    CERP: ["SL", "LX", "LW", "CR"] 
-    PBC: "LW"
-    TIG: ["TB", "CR"]
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-04-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-04-30")  # End Date for Checks
+CheckStart <- as.Date("2024-08-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-08-31")  # End Date for Checks
+EstuaryCode = "SL"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Erica Levine"
-Database = "Oysters_24-10-31"
+Database = "Oysters_24-08-28"
 Server = "localhost\\ERICALOCALSQL"
-
-EstuaryCode = c("SL")  #params$[project] or use 2-letter code in Primary Keys for single estuary
-
 ```
 
 ```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
@@ -40,7 +34,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```{css}
 /* Sets the fonts for the RMarkdown output */
 p {
-font-size: 10pt;
+font-size: 8pt;
 }
 
 p2 {
@@ -48,22 +42,22 @@ font-weight: bold;
 }
 
 h1 {
-font-size: 19pt;
+font-size: 18pt;
 font-weight: bold;
 }
 
 h2 {
-font-size: 15pt;
+font-size: 14pt;
 font-weight: bold;
 }
 
 h3 {
-font-size: 13pt;
+font-size: 12pt;
 font-style: italic;
 }
 
 h4 {
-font-size: 11pt;
+font-size: 10pt;
 text-indent: 5%;
 font-weight: bold;
 }
@@ -79,7 +73,7 @@ con <- dbConnect(odbc(),
 
 dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
   collect() %>% 
-  filter(Estuary %in% EstuaryCode)
+  filter(Estuary == EstuaryCode)
 
 hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
   collect() 
@@ -131,20 +125,20 @@ FixedLocations1 <- dboFixedLocations %>%
   distinct()
           
 TripInfo1 <- dboTripInfo %>% 
-  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL") %>%
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL") %>%
   arrange(TripID)
 
 SampleEvent1 <- dboSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber)
 
 SampleEventWQ1 <- dboSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
-  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
@@ -152,7 +146,7 @@ SampleEventWQ1 <- dboSampleEventWQ %>%
 CI_t <- dboCI %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
   left_join(FixedLocations1, CI1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
 CI1 <- CI_t %>% filter(DataStatus == "Proofed")
@@ -163,7 +157,7 @@ Dermo_t <- dboDermo %>%
          FixedLocationID = substring(SampleEventID, 19, 22),
          DermoMantle = as.numeric(DermoMantle),
          DermoGill = as.numeric(DermoGill)) %>% 
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
   left_join(FixedLocations1, Dermo1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
 Dermo1 <- Dermo_t %>% filter(DataStatus == "Proofed")
@@ -172,7 +166,7 @@ Dermo1 <- Dermo_t %>% filter(DataStatus == "Proofed")
 Repro_t <- dboRepro %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>% 
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
   left_join(FixedLocations1, Repro1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber, OysterID)
 Repro1 <- Repro_t
@@ -189,35 +183,35 @@ Repro_t %>% mutate(TripID = substring(SampleEventID, 1, 17)) %>% subset(TripID %
 
 #"Historic" data
 hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL")  %>%
+  filter(substring(TripID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL")  %>%
   arrange(TripID)
 
 hsdbSampleEvent <- hsdbSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
   arrange(TripDate)
 
 hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "COLL") %>%
+  filter(substring(SampleEventWQID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "COLL") %>%
   arrange(TripDate)
 
 hsdbCI <- hsdbCI %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   arrange(TripDate)
 
 hsdbDermo <- hsdbDermo %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   arrange(TripDate)
 
 hsdbRepro <- hsdbRepro %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
+  filter(substring(SampleEventID,1,2) == EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   arrange(TripDate)
 
 ```
@@ -426,7 +420,7 @@ null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
   # Out of range values
-Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 34) %>%
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
@@ -503,7 +497,7 @@ CI_range2 <- CI1 %>%
   filter(!is.na(ErrorCode)) %>%
   mutate(ErrorCode = sub("NA ", "", ErrorCode)) %>%
   rename(TotalWt = TotalWeight, TarePanWt = TarePanWeight, TissueWetWt = TissueWetWeight, ShellWetWt = ShellWetWeight, TissueDryWt = TissueDryWeight, ShellDryWt = ShellDryWeight) %>%
-  select(OysterID, TotalWt, TarePanWt, TissueWetWt, ShellWetWt, TissueDryWt, ShellDryWt, ErrorCode, Comments) %>% arrange(OysterID)
+  select(OysterID, TotalWt, TarePanWt, TissueWetWt, ShellWetWt, TissueDryWt, ShellDryWt, ErrorCode, Comments)
 CI_range2caption <- "Out of range Condition data. Comment required for out of range values. <br>(A) Expected range for TotalWeight is 80% to 100% of the sum of TissueWetWeight and ShellWetWeight minus TarePanWeight. <br>(B) Expected range for TarePanWeight is 0.9 to 5.0 g. <br>(C) Expected range for TissueWetWeight is 5% to 40% of the sum of TotalWeight and TarePanWeight. <br>(D) Expected range for ShellWetWeight is 60% to 99% of TotalWeight. <br>(E) Expected range for TissueDryWeight is greater than TarePanWeight and up to 90% of TissueWetWeight. <br>(F) Expected range for ShellDryWeight is 80% to 100% of ShellWetWeight."
 
 ## Dermo #
@@ -518,7 +512,7 @@ Dermo_range <- Dermo1 %>%
       ShellHeight < 10 | ShellHeight > 150 ~ "A",
       TRUE ~ NA_character_),
     ErrorCode = case_when(
-      TotalWeight < 6 | TotalWeight > 250 ~ paste(ErrorCode, "D"),
+      TotalWeight < 10 | TotalWeight > 250 ~ paste(ErrorCode, "D"),
       TRUE ~ ErrorCode),
     ErrorCode = case_when(
       ShellWetWeight < (TotalWeight * 0.60) | ShellWetWeight > (TotalWeight * 0.99) ~ paste(ErrorCode, "E"),
@@ -531,7 +525,7 @@ Dermo_range <- Dermo1 %>%
   rename(Height = ShellHeight, Length = ShellLength, Width = ShellWidth, TotalWt = TotalWeight, ShellWetWt = ShellWetWeight, ERR = ErrorCode) %>%
   select(OysterID, Height, Length, Width, TotalWt, ShellWetWt, DermoMantle, DermoGill, ERR, Comments)
 
-Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(D)Expected range for TotalWeight is 6 to 250 g. <br>(E)Expected range for ShellWetWeight is 60% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
+Dermo_rangecaption <- "Out of range Dermo data. Comment required for out of range values. <br>(A)Expected range for ShellHeight is 10 to 150 mm. <br>(D)Expected range for TotalWeight is 10 to 250 g. <br>(E)Expected range for ShellWetWeight is 60% to 99% of TotalWeight.  <br>(F)Expected ranges for DermoMantle and DermoGill is 0 to 5."
 
 ## Repro #
   # Unexpected Null values
@@ -604,19 +598,12 @@ if (nrow(Repro_range) > 0) {
 } else {
   MessRepro_ranges = "Congratulations! No out of range values detected."
 }
-
-#List of stored procedure lines
-for(i in list(EstuaryCode)) {
-  checks <- NULL
-  checks[i] <- paste0("EXECUTE [dbo].[spChecksCollections] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
-  }
 ```
 
 These data checks were run on trips occurring between
 <p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
-from the site(s) <p2> `r EstuaryCode` </p2>\
 by <p2>`r DataManager`</p2> on
-<p2>`r format(Sys.Date(), "%d-%B-%Y")`</p2> using database <p2> `r Database`</p2>.
+<p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
 
 `r kable(TripInfo2,  longtable = TRUE, caption = "Data from these trips is included in these checks")`
 
@@ -628,7 +615,7 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
 
-`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present. *Primary keys will be Childless until data is proofed. Primary keys will also be Childless if an unfinsihed trip is present and no data is entered (i.e. dermo entered, no CI collected).*")}`
+`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present. *Primary keys will be Childless until data is proofed or if there is no data entered.*")}`
 
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
@@ -638,17 +625,17 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table4c) > 0) {kable(ERR_Table4c, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
-`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. Status of collection trips. Trips will not show as proofed unless data is entered/proofed and trip is finished.")}`
+`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
 `r if (nrow(SampleEvent_nulls) > 0) {kable(SampleEvent_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "WQ Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(ConditionIndex_nulls) > 0) {kable(ConditionIndex_nulls, caption = "CI Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(ConditionIndex_nulls) > 0) {kable(ConditionIndex_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(Dermo_nulls) > 0) {kable(Dermo_nulls, caption = "Dermo Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(Dermo_nulls) > 0) {kable(Dermo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
-`r if (nrow(Repro_nulls) > 0) {kable(Repro_nulls, caption = "Repro Critical Nulls. These fields MUST contain data!")}`
+`r if (nrow(Repro_nulls) > 0) {kable(Repro_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
 
 <h2>Data Errors:</h2>
 
@@ -705,7 +692,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessWQ_ranges`</p2>
 
-`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 34.0°C. Comment required for out of range values.")}`
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
 
 `r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
 
@@ -752,7 +739,11 @@ data from the dbo schema.
 <p2>It is recommended that you test this query in your local instance
 BEFORE executing it on fwcsqlint.</p2>
 
-`r paste(checks, collapse = "<br>")`
+EXECUTE [dbo].[spChecksCollections]
+	@CheckStart = \'`r CheckStart`\',
+	@CheckEnd = \'`r CheckEnd`\',
+	@EstuaryCode = \'`r EstuaryCode`\',
+	@DataManager = \'`r DataManager`\';
 
 `r knit_exit()`
 
