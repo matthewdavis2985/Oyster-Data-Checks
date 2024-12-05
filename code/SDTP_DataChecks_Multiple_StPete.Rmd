@@ -10,13 +10,13 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-09-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-09-30")  # End Date for Checks
+CheckStart <- as.Date("2024-04-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-05-30")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-10-02"
+Database = "Oysters_24-12-04"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = c("CR", "LW")  #params$[project] or use 2-letter code in Primary Keys for single estuary
+EstuaryCode = c("TB")  #params$[project] or use 2-letter code in Primary Keys for single estuary
 
 ```
 
@@ -359,7 +359,6 @@ TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach
 ## SedimentTrap #
   # Unexpected Null values
 
-# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 SedimentTrap1$Comments <- ifelse(nchar(SedimentTrap1$Comments) == 0, NA, SedimentTrap1$Comments) 
 null_SedTraps1 <- filter(SedimentTrap1, is.na(NumDrills) & is.na(NumCrabs) & is.na(NumHermitCrabs) & is.na(NumFish) & is.na(NumOtherBiota) & !is.na(Comments)) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, NumDrills, NumCrabs, NumHermitCrabs, NumFish, NumOtherBiota, Comments)
@@ -377,8 +376,18 @@ Days_range <- filter(SedimentTrap1, NumDays < 21 | NumDays > 36) %>%
 
 Tare_ranges <- filter(SedimentTrap1, FilterTareWeight < 0 | FilterTareWeight > 3.50 | PanTareWeight < 0 | PanTareWeight > 400.00) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, PanTareWeight, Comments)
-Dry_ranges <- filter(SedimentTrap1, FilterDryWeight < FilterTareWeight | FilterDryWeight > 12.5 | PanDryWeight < PanTareWeight | PanDryWeight > 600) %>%
-  select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, FilterDryWeight, PanTareWeight, PanDryWeight, Comments)
+Dry_ranges <- filter(SedimentTrap1, FilterDryWeight < FilterTareWeight | FilterDryWeight > 12.5 | PanDryWeight < PanTareWeight | PanDryWeight > 600 | CrucibleDW < TareCrucible | AshWeight < TareCrucible) %>%
+  select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, FilterDryWeight, PanTareWeight, PanDryWeight, TareCrucible, CrucibleDW, AshWeight, Comments)
+if(nrow(Dry_ranges) > 0) {
+  Dry_ranges <- Dry_ranges %>% 
+    mutate(Error = case_when(FilterDryWeight < FilterTareWeight ~ "Small Filter DW",
+                             FilterDryWeight > 12.5 ~ "Large Filter DW",
+                             PanDryWeight < PanTareWeight ~ "Small Pan DW",
+                             PanDryWeight > 600 ~ "Large Pan DW",
+                             CrucibleDW < TareCrucible ~ "Small Crucible DW",
+                             AshWeight < TareCrucible ~ "Small Ash Weight"))
+}
+
 Biota_ranges <- filter(SedimentTrap1, NumDrills < 0 | NumDrills > 8 | NumCrabs < 0 | NumCrabs > 5 | NumHermitCrabs < 0 | NumHermitCrabs > 30 | NumFish < 0 | NumFish > 3 | NumOtherBiota < 0 | NumOtherBiota > 20) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, NumDrills, NumCrabs, NumHermitCrabs, NumFish, NumOtherBiota, Comments)
 
