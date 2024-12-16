@@ -1,0 +1,758 @@
+---
+title: "Survey Data Checks"
+output:
+  html_document:
+params:
+    EAST: ["SL", "LX", "LW"] 
+    CR: ["CR"]
+    TIG: ["TB"] #CR must be run seperately due to CERP & TIG sampling
+---
+
+```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
+# Set your variables
+CheckStart <- as.Date("2024-08-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-09-30")  # End Date for Checks
+DataManager = "Erica Levine"
+Database = "Oysters_24-10-02"
+Server = "localhost\\ERICALOCALSQL"
+
+EstuaryCode = params$CR  #params$Sites for multiple or use 2-letter code in Primary Keys for single
+
+```
+
+```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
+# Load necessary R packages and configure chunks
+library(tidyverse)
+library(odbc)
+library(DBI)
+library(dbplyr)
+library(lubridate)
+library(rMR)
+library(scales)
+library(geosphere)
+library(knitr)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+```
+
+```{css}
+/* Sets the fonts for the RMarkdown output */
+p {
+font-size: 10pt;
+}
+
+p2 {
+font-weight: bold;
+}
+
+h1 {
+font-size: 19pt;
+font-weight: bold;
+}
+
+h2 {
+font-size: 15pt;
+font-weight: bold;
+}
+
+h3 {
+font-size: 13pt;
+font-style: italic;
+}
+
+h4 {
+font-size: 11pt;
+text-indent: 5%;
+font-weight: bold;
+}
+```
+
+```{r DatabaseDownload}
+# Connect to Local database server and pull all necessary data, then close connection 
+con <- dbConnect(odbc(),
+                    Driver = "SQL Server", 
+                    Server = Server,
+                    Database = Database,
+                    Authentication = "ActiveDirectoryIntegrated")
+
+dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
+  collect() %>% 
+  filter(Estuary %in% EstuaryCode)
+
+hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
+  collect() 
+
+dboTripInfo <- tbl(con,in_schema("dbo", "TripInfo")) %>%
+  collect() 
+  
+hsdbSampleEvent <- tbl(con,in_schema("hsdb", "SampleEvent")) %>%
+  collect() 
+  
+dboSampleEvent <- tbl(con,in_schema("dbo", "SampleEvent")) %>%
+  collect() 
+
+hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
+  collect() 
+
+dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
+  collect() 
+
+hsdbSurveyQuadrat <- tbl(con,in_schema("hsdb", "SurveyQuadrat")) %>%
+  collect() 
+
+dboSurveyQuadrat <- tbl(con,in_schema("dbo", "SurveyQuadrat")) %>%
+  collect()
+
+hsdbSurveySH <- tbl(con,in_schema("hsdb", "SurveySH")) %>%
+  collect() 
+
+dboSurveySH <- tbl(con,in_schema("dbo", "SurveySH")) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+
+```
+
+```{r DataFilters}
+# Filter data frames so that only data collected from Recruitment trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+FixedLocations1 <- dboFixedLocations %>% 
+  mutate(StationNumber = as.numeric(StationNumber),
+         FixedLat = LatitudeDec,
+         FixedLon = LongitudeDec) %>% 
+  select(FixedLocationID, Estuary, SectionName, StationNumber, FixedLat, FixedLon) %>% 
+  distinct()
+          
+TripInfo1 <- dboTripInfo %>% 
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+  arrange(TripID)
+
+TripInfo2 <- TripInfo1 %>%
+  select(TripID, TripDate, Comments) %>%
+  arrange(TripID)
+
+SampleEvent1 <- dboSampleEvent %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber)
+
+SampleEventWQ1 <- dboSampleEventWQ %>% 
+  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
+  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, SampleEventWQID)
+
+SurveyQuadrat1 <- dboSurveyQuadrat %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(QuadratID, 19, 22)) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, SurveyQuadrat1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, QuadratID)
+
+SurveySH1 <- dboSurveySH %>% 
+  mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(QuadratID, 19, 22),
+         ShellHeight = as.numeric(ShellHeight)) %>% # Datatype in database is varchar due to weird PowerApps bug
+  filter(substring(QuadratID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(QuadratID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, SurveyQuadrat1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, ShellHeightID)
+
+hsdbTripInfo <- hsdbTripInfo %>% 
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "SRVY")  %>%
+  arrange(TripID)
+
+hsdbSampleEvent <- hsdbSampleEvent %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "SRVY") %>%
+  arrange(TripDate)
+
+hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
+  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
+  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "SRVY") %>%
+  arrange(TripDate)
+
+hsdbSurveyQuadrat <- hsdbSurveyQuadrat %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(QuadratID, 19, 22)) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+  arrange(TripDate)
+
+hsdbSurveySH <- hsdbSurveySH %>% 
+  mutate(TripDate = as.Date(substring(QuadratID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(QuadratID, 19, 22)) %>%
+  filter(substring(QuadratID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(QuadratID,3,6) == "SRVY" & DataStatus == "Proofed") %>%
+  arrange(TripDate)
+
+```
+
+```{r DatabaseErrors}
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are unique in the dbo schema
+ERR_Table1 <- data.frame()
+ERR_Table1a <- data.frame()
+ERR_Table1b <- data.frame()
+ERR_Table1c <- data.frame()
+ERR_Table1d <- data.frame()
+ERR_Table1e <- data.frame()
+
+if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
+  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
+    mutate(PrimaryKey = TripID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
+  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
+    mutate(PrimaryKey = SampleEventID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
+  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
+    mutate(PrimaryKey = SampleEventWQID) %>% 
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SurveyQuadrat1[duplicated(SurveyQuadrat1$QuadratID), ]) > 0) {
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SurveyQuadrat", SurveyQuadrat1[duplicated(SurveyQuadrat1$QuadratID), ])) %>% 
+    mutate(PrimaryKey = QuadratID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SurveySH1[duplicated(SurveySH1$ShellHeightID), ]) > 0) {
+  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SurveySH", SurveySH1[duplicated(SurveySH1$ShellHeightID), ])) %>% 
+    mutate(PrimaryKey = ShellHeightID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are unique in the hsdb schema
+ERR_Tablex <- data.frame()
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
+dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbSurveyQuadrat$QuadratID, hsdbSurveySH$ShellHeightID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+
+# Loop through values
+for (i in seq_along(sorc)) {
+  for (j in seq_along(sorc[[i]])) {
+    check_id <- sorc[[i]][j]
+  # Check if the trip_id exists in TripInfo$TripID
+    if ((check_id %in% dest[[i]])) {
+    # Add trip_id to ERR_Table
+      ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
+    }
+  }
+}
+
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Tablex)
+
+
+### DATABASE ERRORS ###
+# Ensure the Foreign Keys are not orphans
+# Create an empty data frame ERR_Table
+ERR_Table2 <- data.frame()
+sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, SurveyQuadrat1$SampleEventID, SurveySH1$QuadratID)
+dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SurveyQuadrat1$QuadratID)
+tabl <- list("SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+
+# Loop through SampleEvent$TripID values
+for (i in seq_along(sorc)) {
+  for (j in seq_along(sorc[[i]])) {
+    check_id <- sorc[[i]][j]
+  # Check if the trip_id exists in TripInfo$TripID
+    if (!(check_id %in% dest[[i]])) {
+    # Add trip_id to ERR_Table
+      ERR_Table2 <- rbind(ERR_Table2, data.frame(Table = tabl[[i]], OrphanForeignKey = check_id))
+    }
+  }
+}
+ERR_Table2 <- distinct(ERR_Table2) 
+
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are not childless
+ERR_Table3 <- data.frame()
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID, SurveyQuadrat1$QuadratID)
+dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, SurveyQuadrat1$SampleEventID, SurveySH1$QuadratID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEvent", "SurveyQuadrat")
+
+# Loop through SampleEvent$TripID values
+for (i in seq_along(sorc)) {
+  for (j in seq_along(sorc[[i]])) {
+    check_id <- sorc[[i]][j]
+    if (!(check_id %in% dest[[i]])) {
+      ERR_Table3 <- rbind(ERR_Table3, data.frame(Table = tabl[[i]], ChildlessPrimaryKey = check_id))
+    }
+  }
+}
+ERR_Table3 <- distinct(ERR_Table3) 
+
+# Ensure there are 15 quadrats per SampleEvent for all Sites except TB 2023-current
+# Counts up the number of quadrats that were made
+ERR_Table3a <- if(any(EstuaryCode %in% "TB") & CheckStart >= as.Date("2023-01-01")){as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% 
+    rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq") %>% filter(NumOfQuads != 5) %>%
+    merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments))
+} else {as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
+  rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq")  %>%
+    merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments)) %>% filter(NumOfQuads != 15)}
+
+### DATABASE ERRORS ###
+# Ensure that Primary Keys and Foreign Keys have been formed correctly
+ERR_Table4 <- data.frame()
+pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, SurveyQuadrat1$QuadratID, SurveySH1$ShellHeightID)
+fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, SurveyQuadrat1$SampleEventID, SurveySH1$QuadratID)
+tabl <- list("SampleEvent", "SampleEventWQ", "SurveyQuadrat", "SurveySH")
+numb <- list(17, 24, 24, 27)
+
+for (i in seq_along(pkid)) {
+  for (j in seq_along(fkid[[i]])) {
+    check_fkid <- fkid[[i]][j]
+    check_pkid <- substring(pkid[[i]][j],1,numb[[i]])
+    if (check_fkid != check_pkid){
+      ERR_Table4 <- rbind(ERR_Table4, data.frame(Table = tabl[[i]], PrimaryKey = pkid[[i]][j], ForeignKey = check_fkid))
+    }
+  }
+}
+
+### DATABASE ERRORS ###
+# Ensure that any field that MUST have a value is not null
+TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+  select(TripID, TripDate, TripType, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+
+SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+  select(SampleEventID, TripID, FixedLocationID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+
+SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+  select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+
+SurveyQuadrat_nulls <- filter(SurveyQuadrat1, is.na(QuadratID) | is.na(SampleEventID) | is.na(QuadratNumber) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+  select(QuadratID, SampleEventID, QuadratNumber, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+
+SurveySH_nulls <- filter(SurveySH1, is.na(ShellHeightID) | is.na(QuadratID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
+  select(ShellHeightID, QuadratID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+
+# Remove unneeded data frames and values
+
+rm(dboFixedLocations, dboSurveyQuadrat, dboSurveySH, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbSurveyQuadrat, hsdbSurveySH, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+
+# Set Error Messages for Database Errors
+
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table3a) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(SurveyQuadrat_nulls) > 0 | nrow(SurveySH_nulls) > 0) {
+  MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
+  MessERR_Tables2 = ""
+} else {
+  MessERR_Tables1 = ""
+  MessERR_Tables2 = "Congratulations! No Database errors found. Primary Keys are unique and not childless. Foreign Keys are not orphans and are properly formed. All critical fields contain data. You may proceed."
+}
+```
+
+```{r Data Errors}
+### DATA ERRORS ###
+#Value ranges below represent historically high or low values. Actual values can be outside that range and may or may not require a Comment, unless noted otherwise. 
+
+## TripInfo #
+  # There are no fields that require a Comment if they are NULL.
+  # There are no out of range values for this table
+
+## SampleEvent #
+  # Unexpected Null values
+null_SampleEvents <- filter(SampleEvent1, is.na(FixedLon) & (is.na(LatitudeDec) | is.na(LongitudeDec) | is.na(LatDec) | is.na(LatMin) | is.na(LongDec) | is.na(LongMin))) %>%
+  select(SampleEventID, LatitudeDec, LongitudeDec, LatDec, LatMin, LongDec, LongMin, FixedLon, FixedLat, Comments)
+
+  # Out of range values - not needed for St Pete data currently since station locations are checked in MGID checks.
+SampleEvent_range <- NULL
+    # Flags SampleEvents that occur over 125 meters from the assigned FixedLocation 
+#SampleEvent_range <- SampleEvent1 %>% rowwise() %>% mutate(DistFromFixed = distVincentySphere(c(LongitudeDec, LatitudeDec), c(FixedLon, FixedLat))) %>% filter(DistFromFixed > 125) %>% select(SampleEventID, LatitudeDec, LongitudeDec, FixedLat, FixedLon, DistFromFixed)
+  
+## Water Quality #
+  # Unexpected Null values
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth) | is.na(PercentDissolvedOxygen)) %>% 
+  filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), Comments)) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
+
+  # Out of range values
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
+Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
+DO_range <- SampleEventWQ1 %>% 
+  mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
+  filter(DO.Sat < 0.50 | DO.Sat > 1.50) %>%
+  mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, PercentDissolvedOxygen, DO.Sat, Comments)
+DOPct_range <- SampleEventWQ1 %>% 
+  filter(PercentDissolvedOxygen < 20 | PercentDissolvedOxygen > 150) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, PercentDissolvedOxygen, Comments)
+pH_range <- filter(SampleEventWQ1, pH < 7.0 | pH > 8.5) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, pH, Comments)
+Depth_range <- filter(SampleEventWQ1, Depth < 0 | Depth > 3.5) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
+SampleDepth_range <- filter(SampleEventWQ1, SampleDepth < 0 | SampleDepth > Depth) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
+Secchi_range <- filter(SampleEventWQ1, Secchi < 0 | Secchi > Depth) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Secchi, Comments)
+TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
+TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
+
+## SurveyQuadrat #
+  # Unexpected Null values
+
+# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
+SurveyQuadrat1$Comments <- ifelse(nchar(SurveyQuadrat1$Comments) == 0, NA, SurveyQuadrat1$Comments) 
+
+null_SurveyQuads <- if(any(EstuaryCode %in% c("SL", "LX", "LW"))) {
+  filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) & !is.na(Comments)) %>%
+    select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
+  } else if(EstuaryCode %in% "CR") {
+    filter(SurveyQuadrat1, (QuadratNumber < 11 & (is.na(NumLive) | is.na(NumDead)) & !is.na(Comments)) | (QuadratNumber > 10 & (is.na(NumLive) | is.na(NumDead) | is.na(TotalVolume) | is.na(TotalWeight)) & !is.na(Comments))) %>%
+    select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
+  } else {
+  filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.na(TotalVolume) | is.na(TotalWeight) & !is.na(Comments)) %>%
+  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
+}
+
+  # Out of range values
+SurveyQuad_range <- if(any(EstuaryCode %in% c("SL", "LX", "LW"))) {
+  filter(SurveyQuadrat1, NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500) %>%
+    select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
+} else if (EstuaryCode == "CR"){
+  filter(SurveyQuadrat1, (QuadratNumber < 11 & (NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500)) |(QuadratNumber > 10 & (NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500 | TotalVolume < 0.25 | 
+           TotalVolume > 5.5 | TotalWeight < 0.1 | TotalWeight > 10.00))) %>%
+    select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
+} else {
+  filter(SurveyQuadrat1, NumLive < 0 | NumLive > 900 | NumDead < 0 | NumDead > 500 | TotalVolume < 0.25 | 
+           TotalVolume > 5.5 | TotalWeight < 0.1 | TotalWeight > 10.00) %>%
+    select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, Comments)
+}
+
+## SurveySH #
+  # Unexpected Null values
+
+# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
+SurveySH1$Comments <- ifelse(nchar(SurveySH1$Comments) == 0, NA, SurveySH1$Comments) 
+
+null_SurveySH <- left_join(SurveyQuadrat1, SurveySH1, by = c("QuadratID")) %>%
+  rename("Comments" = "Comments.x") %>%
+  select(ShellHeightID, ShellHeight, NumLive, Comments) %>%
+  filter(is.na(ShellHeight) & NumLive != 0) 
+
+  # Out of range values
+SurveySH_range <- filter(SurveySH1, ShellHeight < 1 | ShellHeight > 150) %>%
+  select(ShellHeightID, ShellHeight, Comments) 
+
+  # Check for mismatch in number live and number measured. 
+initialSHmeasurement <- filter(SurveySH1, substring(ShellHeightID, 29, 31) == "001") %>%
+  rename("InitialSH" = "ShellHeight") # Pulls in the initial SH for each quadrat
+
+SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the number of SH measurements that were made
+  rename("QuadratID" = "Var1",
+         "NumMeasured" = "Freq") %>% mutate(SampleEventID = substr(QuadratID, 1, 24)) %>% left_join(SampleEvent1  %>% mutate(Station = paste0(SectionName, StationNumber)) %>% dplyr::select(SampleEventID, Station)) %>% dplyr::select(-SampleEventID) %>%
+  left_join(SurveyQuadrat1, initialSHmeasurement, by = c("QuadratID")) %>%
+  left_join(initialSHmeasurement, by = c("QuadratID")) %>%
+  select(QuadratID, Station, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) 
+
+if(any(EstuaryCode %in% c("SL", "LX", "LW"))){
+  Over10Measured <- SHmeasures %>% filter(NumMeasured > 10) %>% mutate(ErrorColumn = "Over 10 measured")
+} else if(EstuaryCode %in% "CR"){
+  Over10Measured <- SHmeasures %>% filter(QuadratNumber < 11 & NumMeasured > 10) %>% mutate(ErrorColumn = "Over 10 measured")
+  Over50Measured <- SHmeasures %>% filter(QuadratNumber > 10 & NumMeasured > 50) %>% mutate(ErrorColumn = "Over 50 measured")
+}else {
+    Over50Measured <- SHmeasures %>% filter(NumMeasured > 50) %>% mutate(ErrorColumn = "Over 50 measured")
+    }
+
+if(any(EstuaryCode %in% c("SL", "LX", "LW"))){
+  TooManyTooFew <- SHmeasures %>% filter(NumLive != NumMeasured) %>% 
+    filter(!(NumLive > 10 & NumMeasured == 10)) %>% 
+    filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>%
+    mutate(ErrorColumn = "Too many or too few measured")
+} else if(EstuaryCode %in% "CR"){
+  TooManyTooFew <- SHmeasures %>% filter(NumLive != NumMeasured) %>% mutate(Location = as.numeric(substring(QuadratID, 19, 22))) %>%
+    filter((!(NumLive > 10 & NumMeasured == 10) & QuadratNumber < 11 & !is.na(Location)) | (!(NumLive > 50 & NumMeasured == 50) & QuadratNumber > 10)) %>% 
+    filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>% dplyr::select(-Location) %>%
+    mutate(ErrorColumn = "Too many or too few measured")
+} else {
+    TooManyTooFew <- SHmeasures %>% filter(NumLive != NumMeasured) %>% 
+    filter(!(NumLive > 50 & NumMeasured == 50)) %>% 
+    filter(!(is.na(InitialSH) & NumLive == 0 & NumMeasured == 1)) %>%
+    mutate(ErrorColumn = "Too many or too few measured")
+}
+
+if(any(EstuaryCode %in% c("SL", "LX", "LW"))){
+  SHMismatch <- union(Over10Measured, TooManyTooFew) %>% arrange(QuadratID)
+} else if(EstuaryCode %in% "CR"){
+  SHMismatch <- union(Over10Measured, union(Over50Measured, TooManyTooFew)) %>% arrange(QuadratID)
+}else{
+  SHMismatch <- union(Over50Measured, TooManyTooFew) %>% arrange(QuadratID)
+  }
+
+rm(initialSHmeasurement, SHmeasures, Over50Measured, TooManyTooFew) # deletes data frames no longer needed
+
+## Set error messages #
+
+if (nrow(null_SampleEvents) > 0) {
+  Mess_null_SampleEvents = ""
+} else {
+  Mess_null_SampleEvents = "Congratulations! No unexpected null values detected."
+}
+  
+if (nrow(null_WQs) > 0) {
+  Mess_null_WQs = ""
+} else {
+  Mess_null_WQs = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(null_SurveyQuads) > 0) {
+  Mess_null_SurveyQuads = ""
+} else {
+  Mess_null_SurveyQuads = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(null_SurveySH) > 0) {
+  Mess_null_SurveySHs = ""
+} else {
+  Mess_null_SurveySHs = "Congratulations! No unexpected null values detected."
+}
+
+if (length(SampleEvent_range) == 0) {
+  MessSampleEvent_ranges = "Congratulations! No out of range values detected."
+} else {
+  MessSampleEvent_ranges = ""
+}
+
+if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
+  MessWQ_ranges = ""
+} else {
+  MessWQ_ranges = "Congratulations! No out of range values detected."
+}
+
+if (nrow(SurveyQuad_range) > 0) {
+  MessSurveyQuad_ranges = ""
+} else {
+  MessSurveyQuad_ranges = "Congratulations! No out of range values detected."
+}
+
+if (nrow(SurveySH_range) > 0 | nrow(SHMismatch) > 0) {
+  MessSurveySH_ranges = ""
+} else {
+  MessSurveySH_ranges = "Congratulations! No out of range values detected."
+}
+
+#List of stored procedure lines
+for(i in list(EstuaryCode)) {
+  checks <- NULL
+  checks[i] <- paste0("EXECUTE [dbo].[spChecksSurvey] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
+  }
+```
+
+These data checks were run on trips occurring between
+<p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
+for the site(s) <p2> `r EstuaryCode` </p2>\
+by <p2>`r DataManager`</p2> on
+<p2>`r format(Sys.Date(), "%d-%B-%Y")`</p2> using database <p2> `r Database`</p2>.
+
+`r kable(TripInfo2, caption = "Data from these trips is included in these checks")`
+
+<h2>Database Errors:</h2>
+
+<h1>`r MessERR_Tables1`</h1> <p2>`r MessERR_Tables2`</p2>
+
+`r if (nrow(ERR_Table1) > 0) {kable(ERR_Table1, caption = "Duplicate Primary Keys. Primary Keys MUST be unique!")}`
+
+`r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
+
+`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present.")}`
+
+`r if (nrow(ERR_Table3a) > 0 & any(EstuaryCode %in% c("SL", "LX", "LW"))) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 15 child records unless a valid comment is present.")}`
+`r if (nrow(ERR_Table3a) > 0 & any(EstuaryCode %in% "TB")) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 5 child records unless a valid comment is present.")}`
+
+`r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
+
+`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SampleEvent_nulls) > 0) {kable(SampleEvent_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SurveyQuadrat_nulls) > 0) {kable(SurveyQuadrat_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SurveySH_nulls) > 0) {kable(SurveySH_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+<h2>Data Errors:</h2>
+
+<h3>~ ~ ~ ~ ~ ~ ~ Unexpected null values ~ ~ ~ ~ ~ ~ ~</h3>
+
+The following fields are expected to either contain data or have a
+comment explaining why the data is missing.
+
+<h4>--- Sample Event ---</h4>
+
+<p2>`r Mess_null_SampleEvents`</p2>
+
+`r if (nrow(null_SampleEvents) > 0) {kable(null_SampleEvents, caption = "Null Sample Event Data. Comment Required for all Null values")}`
+
+<h4>--- Water Quality ---</h4>
+
+<p2>`r Mess_null_WQs`</p2>
+
+`r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment Required for all Null values")}`
+
+<h4>--- Survey Quadrats ---</h4>
+
+<p2>`r Mess_null_SurveyQuads`</p2>
+
+`r if (nrow(null_SurveyQuads) > 0) {kable(null_SurveyQuads, caption = "Null Survey Quadrat Data. Comment Required for all Null values")}`
+
+<h4>--- Survey Shell Heights ---</h4>
+
+<p2>`r Mess_null_SurveySHs`</p2>
+
+`r if (nrow(null_SurveySH) > 0) {kable(null_SurveySH, caption = "Null Survey Shell Height Data. Null values should only be recorded when no oysters were measured. ShellHeightID should end _001 and NumLive should be 0")}`
+
+<h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
+
+Value ranges below represent historically high or low values. Actual
+values can be outside that range and may or may not require a Comment.
+
+<h4>--- Sample Event ---</h4>
+
+<p2>`r MessSampleEvent_ranges`</p2>
+
+`r if (length(SampleEvent_range) == 0) {kable(SampleEvent_range, caption = "If distance from Fixed Location needs to be checked, update code for SampleEvent_range.")}`
+`r if (length(SampleEvent_range) > 0) {kable(SampleEvent_range, caption = "Out of range distance from Fixed Location. Expected range is 125 meters. Comment required for out of range values.")}`
+
+<h4>--- Water Quality ---</h4>
+
+<p2>`r MessWQ_ranges`</p2>
+
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 33.0°C. Comment required for out of range values.")}`
+
+`r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 38.0 ppt. Comment required for out of range values.")}`
+
+`r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range dissolved oxygen data. Expected calculated range is 50% to 120% saturation. Comment required for out of range values.")}`
+
+`r if (nrow(DOPct_range) > 0) {kable(DOPct_range, caption = "Out of range percent dissolved oxygen data. Expected range is 20% to 150% saturation. Comment required for out of range values.")}`
+
+`r if (nrow(pH_range) > 0) {kable(pH_range, caption = "Out of range pH data. Expected range is 7.0 to 8.5. Comment required for out of range values.")}`
+
+`r if (nrow(Depth_range) > 0) {kable(Depth_range, caption = "Out of range depth data. Expected range is 0.0 to 3.5 m. Cannot be less than 0. Comment required for out of range values.")}`
+
+`r if (nrow(SampleDepth_range) > 0) {kable(SampleDepth_range, caption = "Out of range Sample depth data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
+
+`r if (nrow(Secchi_range) > 0) {kable(Secchi_range, caption = "Out of range Secchi data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
+
+`r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
+
+<h4>--- Survey Quadrat ---</h4>
+
+<p2>`r MessSurveyQuad_ranges`</p2>
+
+`r if (nrow(SurveyQuad_range) > 0 & any(EstuaryCode %in% c("SL", "LX", "LW"))) {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Comment required for out of range values.")} else {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 900. Expected range for NumDead is 0 to 500. Expected range for TotalVolume is 0.05 to 5.5 L. Expected range for TotalWeight is 0.10 to 10.00 kg. Comment required for out of range values.")}`
+
+<h4>--- Survey Shell Heights ---</h4>
+
+<p2>`r MessSurveySH_ranges`</p2>
+
+`r if (nrow(SurveySH_range) > 0) {kable(SurveySH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
+
+`r if (nrow(SHMismatch) > 0 & any(EstuaryCode %in% c("SL", "LX", "LW"))) {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 10 and NumMeasured = 10. Comment required for mismatched values.")} else {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+
+<h2>SQL Code:</h2>
+
+If there are no Database Errors detected and all Data Errors have been
+addressed, you may use the following SQL code to Complete these data.
+This code will update the DataStatus, CompletedBy, and DateCompleted
+fields; it will copy the data to the hsdb schema; and it will remove the
+data from the dbo schema.
+
+<p2>It is recommended that you test this query in your local instance
+BEFORE executing it on fwcsqlint.</p2>
+
+`r paste(checks, collapse = "<br>")`
+
+`r knit_exit()`
+
+```{sql SQL code, eval=FALSE, include=FALSE}
+--- This code creates a stored procedure in the database. 
+-- To do so, copy and paste this code VERBATIM into SSMS
+-- DO NOT RUN THIS CODE WITH R --
+
+CREATE PROCEDURE [dbo].[spChecksSurvey](
+	@CheckStart AS DATE,
+	@CheckEnd AS DATE,
+	@EstuaryCode AS VARCHAR(2),
+	@DataManager AS VARCHAR(max)
+	)
+AS
+BEGIN
+	DECLARE @CompletedDate DATE;
+	SET @CompletedDate = cast(getDate() as date);
+
+	IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
+	BEGIN
+    DROP TABLE #ValidTrips;
+  END
+
+	CREATE TABLE #ValidTrips (
+		TripID VARCHAR(50)
+	);
+
+	INSERT INTO #ValidTrips (TripID)
+	SELECT TripID
+	FROM dbo.TripInfo
+	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
+	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'SRVY%');
+
+	-- Query the TripInfo table using the temporary table
+	UPDATE dbo.TripInfo 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+	-- Query the SampleEvent table using the temporary table
+	UPDATE dbo.SampleEvent 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+	-- Query the SampleEventWQ table using the temporary table
+	UPDATE dbo.SampleEventWQ 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
+  -- Query the SurveyQuadrat table using the temporary table
+  UPDATE dbo.SurveyQuadrat 
+  SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+  WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+  
+  -- Query the SurveySH table using the temporary table
+  UPDATE dbo.SurveySH 
+  SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+  WHERE QuadratID IN (SELECT QuadratID FROM SurveyQuadrat WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips)));
+
+  -- Insert the Completed data into hsdb, and DELETE FROM dbo
+  INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
+  
+  DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
+  
+  INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
+  
+  DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
+  
+  INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
+  
+  DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
+  
+  INSERT INTO hsdb.SurveyQuadrat SELECT * FROM SurveyQuadrat WHERE DataStatus = 'Completed';
+  
+  DELETE FROM dbo.SurveyQuadrat WHERE DataStatus = 'Completed';
+  
+  INSERT INTO hsdb.SurveySH SELECT * FROM SurveySH WHERE DataStatus = 'Completed';
+  
+  DELETE FROM dbo.SurveySH WHERE DataStatus = 'Completed';
+
+END
+
+```

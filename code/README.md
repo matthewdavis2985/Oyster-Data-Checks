@@ -24,7 +24,7 @@ Data managers should follow the following steps to complete Data Checks:
 	<ol><li>It is highly advised that the ‘CheckStart’ and ‘CheckEnd’ values encompass entire months (ex. 2023-01-01 to 2023-03-31). This will ensure that mistake trips are captured.</li>
 	<li>Note that the ‘CheckStart’ and ‘CheckEnd’ values MUST be in the YYYY-MM-DD format.</li></ol>
 <li>Click ‘Knit’. Status will appear in the Render window. The report will open in a new window. Click ‘Open in Browser’.</li>
-<li>Review the report to ensure the anticipated trip(s) are included in your report. If not, ensure in SSMS that all records are Proofed. Repeat steps 3 – 5.</li>
+<li>Review the report to ensure the anticipated trip(s) are included in your report. If not, ensure in SSMS that all records are Proofed. See example scripts in https://github.com/E-Levine/SQL-Database-Corrections. Repeat steps 3 – 5.</li>
 <li>If there are ANY Database Errors, they must be addressed immediately before proceeding. Correct any Database Errors and repeat steps 3 – 6.</li>
 	<ol><li>The only times a Database Error can remain before proceeding are:</li> 
 		<ol><li>If Childless Primary Keys are detected in Recruitment and Sediment during Deployment Only trips since there are no stringers or sediment traps being retrieved.</li>
