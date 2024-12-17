@@ -10,8 +10,8 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2008-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2008-12-30")  # End Date for Checks
+CheckStart <- as.Date("2005-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2005-12-30")  # End Date for Checks
 DataManager = "Erica Levine"
 Database = "Oysters_24-12-04"
 Server = "localhost\\ERICALOCALSQL"
@@ -135,7 +135,7 @@ Recruitment1 <- hsdbRecruitment %>%
   arrange(TripDate, StationNumber, ShellID) %>%
   filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
 
-Rcrt_dates <- Recruitment1 %>% dplyr::select(SampleEventID, Estuary, StationNumber, DeployedDate, NumDays, Comments) %>% unique() %>% arrange(SampleEventID)
+Rcrt_dates <- Recruitment1  %>% mutate(SampleEvent = substr(SampleEventID, 1, 17)) %>% dplyr::select(SampleEvent, FixedLocationID, Estuary, StationNumber, DeployedDate, NumDays, Comments) %>% unique() %>% arrange(SampleEvent) %>% group_by(SampleEvent, Estuary, DeployedDate, NumDays) %>% mutate(FLIDs = paste0(FixedLocationID, collapse = ", "), Stations = paste0(StationNumber, collapse = ", "), Comments_all = paste0(Comments, collapse = " :: ")) %>% dplyr::select(-c(FixedLocationID, StationNumber, Comments)) %>% unique()
 
 ```
 
@@ -277,8 +277,8 @@ if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ER
 ## Water Quality #
   # Unexpected Null values
 
-null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth) | is.na(PercentDissolvedOxygen) | is.na(TurbidityYSI) | is.na(TurbidityHach)) %>% filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), Comments)) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, TurbidityYSI, TurbidityHach, Comments)
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth) | is.na(PercentDissolvedOxygen)) %>% filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), Comments)) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, Comments)
 
   # Out of range values
 Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 34) %>%
@@ -301,24 +301,15 @@ SampleDepth_range <- filter(SampleEventWQ1, SampleDepth < 0 | SampleDepth > Dept
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
 Secchi_range <- filter(SampleEventWQ1, Secchi < 0 | Secchi > Depth) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Depth, Secchi, Comments)
-TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
-TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
-  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
 
 ## Recruitment #
   # Unexpected Null values
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 Recruitment1$Comments <- ifelse(nchar(Recruitment1$Comments) == 0, NA, Recruitment1$Comments) 
-null_Recs <- if("CR" %in% EstuaryCode) {rbind(filter(Recruitment1, Estuary == "CR" & ShellPosition >= 2 & ShellPosition <= 11) %>% filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments),
-                                              filter(Recruitment1, Estuary != "CR" & ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
-  filter(is.na(NumBottom) & is.na(Comments)) %>%
-  select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments))
+null_Recs <- if("CR" %in% EstuaryCode) {rbind(filter(Recruitment1, Estuary == "CR" & ShellPosition >= 2 & ShellPosition <= 11) %>% filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments), filter(Recruitment1, Estuary != "CR" & ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments))
   } else {
-    filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
-  filter(is.na(NumBottom) & is.na(Comments)) %>%
-  select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments)}
+    filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>%  filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments)}
 
   # Out of range values
 Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
@@ -343,7 +334,7 @@ if (nrow(null_Recs) > 0) {
   Mess_null_Recs = "Congratulations! No unexpected null values detected."
 }
 
-if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
+if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0) {
   MessWQ_ranges = ""
 } else {
   MessWQ_ranges = "Congratulations! No out of range values detected."
@@ -428,7 +419,6 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(DOPct_range) > 0) {kable(DOPct_range, caption = "Out of range percent dissolved oxygen data. Expected range is 20% to 150% saturation. Comment required for out of range values.")}`
 
-
 `r if (nrow(pH_range) > 0) {kable(pH_range, caption = "Out of range pH data. Expected range is 7.0 to 8.5. Comment required for out of range values.")}`
 
 `r if (nrow(Depth_range) > 0) {kable(Depth_range, caption = "Out of range depth data. Expected range is 0.0 to 3.5 m. Cannot be less than 0. Comment required for out of range values.")}`
@@ -437,9 +427,6 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(Secchi_range) > 0) {kable(Secchi_range, caption = "Out of range Secchi data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
 
-`r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
-
-`r if (nrow(TurbidityHach_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
 
 <h4>--- Recruitment ---</h4>
 

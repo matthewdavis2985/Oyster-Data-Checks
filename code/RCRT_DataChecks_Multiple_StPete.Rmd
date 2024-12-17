@@ -148,7 +148,8 @@ Recruitment1 <- dboRecruitment %>%
   arrange(TripDate, StationNumber, ShellID) %>%
   filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
 
-Rcrt_dates <- Recruitment1 %>% dplyr::select(SampleEventID, Estuary, StationNumber, DeployedDate, NumDays, Comments) %>% unique() %>% arrange(SampleEventID)
+Rcrt_dates <- Recruitment1  %>% mutate(SampleEvent = substr(SampleEventID, 1, 17)) %>% dplyr::select(SampleEvent, FixedLocationID, Estuary, StationNumber, DeployedDate, NumDays, Comments) %>% unique() %>% arrange(SampleEvent) %>% group_by(SampleEvent, Estuary, DeployedDate, NumDays) %>% mutate(FLIDs = paste0(FixedLocationID, collapse = ", "), Stations = paste0(StationNumber, collapse = ", "), Comments_all = paste0(Comments, collapse = " :: ")) %>% dplyr::select(-c(FixedLocationID, StationNumber, Comments)) %>% unique()
+
 
 hsdbTripInfo <- hsdbTripInfo %>% 
   filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment")  %>%
