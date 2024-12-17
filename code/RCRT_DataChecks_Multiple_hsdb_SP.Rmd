@@ -1,0 +1,538 @@
+---
+title: "Recruitment Data Checks"
+output:
+  html_document:
+params:
+    CERP: ["SL", "LX", "LW", "CR"] 
+    PBC: "LW"
+    TIG: ["TB", "CR"]
+---
+
+```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
+# Set your variables
+CheckStart <- as.Date("2008-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2008-12-30")  # End Date for Checks
+DataManager = "Erica Levine"
+Database = "Oysters_24-12-04"
+Server = "localhost\\ERICALOCALSQL"
+
+EstuaryCode = c("TB")  #params$[project] or use 2-letter code in Primary Keys for single estuary
+
+```
+
+```{r PackageLoad, echo = FALSE, warning = FALSE, message = FALSE}
+# Load necessary R packages and configure chunks
+library(tidyverse)
+library(odbc)
+library(DBI)
+library(dbplyr)
+library(lubridate)
+library(rMR)
+library(scales)
+library(knitr)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+```
+
+```{css}
+/* Sets the fonts for the RMarkdown output */
+p {
+font-size: 10pt;
+}
+
+p2 {
+font-weight: bold;
+}
+
+h1 {
+font-size: 19pt;
+font-weight: bold;
+}
+
+h2 {
+font-size: 15pt;
+font-weight: bold;
+}
+
+h3 {
+font-size: 13pt;
+font-style: italic;
+}
+
+h4 {
+font-size: 11pt;
+text-indent: 5%;
+font-weight: bold;
+}
+```
+```{r DatabaseDownload}
+# Connect to Local database server and pull all necessary data, then close connection 
+con <- dbConnect(odbc(),
+                    Driver = "SQL Server", 
+                    Server = Server,
+                    Database = Database,
+                    Authentication = "ActiveDirectoryIntegrated")
+
+dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
+  collect() %>% 
+  filter(Estuary %in% EstuaryCode)
+
+hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
+  collect() 
+
+hsdbSampleEvent <- tbl(con,in_schema("hsdb", "SampleEvent")) %>%
+  collect() 
+  
+hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
+  collect() 
+
+hsdbRecruitment <- tbl(con,in_schema("hsdb", "Recruitment")) %>%
+  collect() 
+
+DBI::dbDisconnect(con)
+
+```
+
+```{r DataFilters}
+# Filter data frames so that only data collected from Recruitment trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+FixedLocations1 <- dboFixedLocations %>% 
+  mutate(StationNumber = as.numeric(StationNumber)) %>% 
+  select(FixedLocationID,
+         Estuary,
+         SectionName, 
+         StationNumber) %>% 
+  distinct()
+          
+TripInfo1 <- hsdbTripInfo %>% 
+  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & TripType == "Recruitment") %>%
+  arrange(TripID)
+
+TripInfo2 <- TripInfo1 %>%
+  select(TripID, TripDate, DataStatus, Comments) %>%
+  arrange(TripID)
+
+SampleEvent1 <- hsdbSampleEvent %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber)
+
+SampleEventWQ1 <- hsdbSampleEventWQ %>% 
+  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
+  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, SampleEventWQ1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, SampleEventWQID)
+
+Recruitment1 <- hsdbRecruitment %>% 
+  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
+         FixedLocationID = substring(ShellID, 19, 22),
+         NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
+  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
+  left_join(FixedLocations1, Recruitment1, by = c("FixedLocationID")) %>%
+  arrange(TripDate, StationNumber, ShellID) %>%
+  filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
+
+Rcrt_dates <- Recruitment1 %>% dplyr::select(SampleEventID, Estuary, StationNumber, DeployedDate, NumDays, Comments) %>% unique() %>% arrange(SampleEventID)
+
+```
+
+```{r DatabaseErrors}
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are unique in the dbo schema
+ERR_Table1 <- data.frame()
+ERR_Table1a <- data.frame()
+ERR_Table1b <- data.frame()
+ERR_Table1c <- data.frame()
+ERR_Table1d <- data.frame()
+
+if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
+  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
+    mutate(PrimaryKey = TripID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
+  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
+    mutate(PrimaryKey = SampleEventID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
+  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
+    mutate(PrimaryKey = SampleEventWQID) %>% 
+    select(schema, Table, PrimaryKey)
+}
+
+if (nrow(Recruitment1[duplicated(Recruitment1$ShellID), ]) > 0) {
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "Recruitment", Recruitment1[duplicated(Recruitment1$ShellID), ])) %>% 
+    mutate(PrimaryKey = ShellID) %>%
+    select(schema, Table, PrimaryKey)
+}
+
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d)
+
+
+### DATABASE ERRORS ###
+# Ensure the Foreign Keys are not orphans
+# Create an empty data frame ERR_Table
+ERR_Table2 <- data.frame()
+sorc <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
+dest <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
+tabl <- list("SampleEvent", "SampleEventWQ", "Recruitment")
+
+# Loop through SampleEvent$TripID values
+for (i in seq_along(sorc)) {
+  for (j in seq_along(sorc[[i]])) {
+    check_id <- sorc[[i]][j]
+  # Check if the trip_id exists in TripInfo$TripID
+    if (!(check_id %in% dest[[i]])) {
+    # Add trip_id to ERR_Table
+      ERR_Table2 <- rbind(ERR_Table2, data.frame(Table = tabl[[i]], OrphanForeignKey = check_id))
+    }
+  }
+}
+ERR_Table2 <- distinct(ERR_Table2) 
+
+### DATABASE ERRORS ###
+# Ensure the Primary Keys are not childless
+ERR_Table3 <- data.frame()
+sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEvent1$SampleEventID)
+dest <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
+tabl <- list("TripInfo", "SampleEvent", "SampleEvent")
+
+# Loop through SampleEvent$TripID values
+for (i in seq_along(sorc)) {
+  for (j in seq_along(sorc[[i]])) {
+    check_id <- sorc[[i]][j]
+    if (!(check_id %in% dest[[i]])) {
+      ERR_Table3 <- rbind(ERR_Table3, data.frame(Table = tabl[[i]], ChildlessPrimaryKey = check_id))
+    }
+  }
+}
+ERR_Table3 <- distinct(ERR_Table3) %>% arrange(check_id)
+
+### DATABASE ERRORS ###
+# Ensure that Primary Keys and Foreign Keys have been formed correctly
+ERR_Table4 <- data.frame()
+pkid <- list(SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, Recruitment1$ShellID)
+fkid <- list(SampleEvent1$TripID, SampleEventWQ1$SampleEventID, Recruitment1$SampleEventID)
+tabl <- list("SampleEvent", "SampleEventWQ", "Recruitment")
+numb <- list(17, 24, 24)
+
+for (i in seq_along(pkid)) {
+  for (j in seq_along(fkid[[i]])) {
+    check_fkid <- fkid[[i]][j]
+    check_pkid <- substring(pkid[[i]][j],1,numb[[i]])
+    if (check_fkid != check_pkid) {
+      ERR_Table4 <- rbind(ERR_Table4, data.frame(Table = tabl[[i]], PrimaryKey = pkid[[i]][j], ForeignKey = check_fkid))
+    }
+  }
+}
+
+### DATABASE ERRORS ###
+# Ensure that any field that MUST have a value is not null
+TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate)) %>%
+  select(TripID, TripDate, TripType, Comments)
+
+SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID)) %>%
+  select(SampleEventID, TripID, FixedLocationID, Comments)
+
+SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID)) %>%
+  select(SampleEventWQID, SampleEventID, Comments)
+
+Recruitment_nulls <- filter(Recruitment1, is.na(ShellID) | is.na(SampleEventID) | is.na(DeployedDate) | is.na(ShellReplicate) | is.na(ShellPosition)) %>%
+  select(ShellID, SampleEventID, DeployedDate, ShellReplicate, ShellPosition, Comments)
+
+# Remove unneeded data frames and values
+
+rm(dboFixedLocations, dest, FixedLocations1, hsdbRecruitment, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+
+# Set Error Messages for Database Errors
+
+if (nrow(ERR_Table1) > 0 | nrow(ERR_Table2) > 0 | nrow(ERR_Table3) > 0 | nrow(ERR_Table4) > 0 | nrow(TripInfo_nulls) > 0 | nrow(SampleEvent_nulls) > 0 | nrow(SampleEventWQ_nulls) > 0 | nrow(Recruitment_nulls) > 0) {
+  MessERR_Tables1 = "STOP! These are critical errors that must be fixed before proceeding!"
+  MessERR_Tables2 = ""
+} else {
+  MessERR_Tables1 = ""
+  MessERR_Tables2 = "Congratulations! No Database errors found. Primary Keys are unique and not childless. Foreign Keys are not orphans and are properly formed. All critical fields contain data. You may proceed."
+}
+```
+
+```{r Data Errors}
+### DATA ERRORS ###
+#Value ranges below represent historically high or low values. Actual values can be outside that range and may or may not require a Comment, unless noted otherwise. 
+
+## TripInfo #
+  # There are no fields that require a Comment if they are NULL.
+  # There are no out of range values for this table
+
+## SampleEvent #
+  # There are no fields that require a Comment if they are NULL.
+  # There are no out of range values for this table
+
+## Water Quality #
+  # Unexpected Null values
+
+null_WQs <- filter(SampleEventWQ1, is.na(Temperature) | is.na(Salinity) | is.na(DissolvedOxygen) | is.na(pH) | is.na(Depth) | is.na(SampleDepth) | is.na(PercentDissolvedOxygen) | is.na(TurbidityYSI) | is.na(TurbidityHach)) %>% filter(!grepl(paste(c("ame as", "ame WQ", "ame Water", "ame water"), collapse = '|'), Comments)) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Temperature, Salinity, DissolvedOxygen, PercentDissolvedOxygen, pH, TurbidityYSI, TurbidityHach, Comments)
+
+  # Out of range values
+Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 34) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Temperature, Comments)
+Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 38) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
+DO_range <- SampleEventWQ1 %>% 
+  mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
+  filter(DO.Sat < 0.50 | DO.Sat > 1.50) %>%
+  mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, DO.Sat, PercentDissolvedOxygen, Comments)
+DOPct_range <- SampleEventWQ1 %>% 
+  filter(PercentDissolvedOxygen < 20 | PercentDissolvedOxygen > 150) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, PercentDissolvedOxygen, Comments)
+pH_range <- filter(SampleEventWQ1, pH < 7.0 | pH > 8.5) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, pH, Comments)
+Depth_range <- filter(SampleEventWQ1, Depth < 0 | Depth > 3.5) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
+SampleDepth_range <- filter(SampleEventWQ1, SampleDepth < 0 | SampleDepth > Depth) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Comments)
+Secchi_range <- filter(SampleEventWQ1, Secchi < 0 | Secchi > Depth) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, Depth, Secchi, Comments)
+TurbidityYSI_range <- filter(SampleEventWQ1, TurbidityYSI < -2 | TurbidityYSI > 30) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityYSI, Comments)
+TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach > 30) %>%
+  select(SampleEventWQID, StationNumber, SampleDepth, TurbidityHach, Comments)
+
+## Recruitment #
+  # Unexpected Null values
+
+# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
+Recruitment1$Comments <- ifelse(nchar(Recruitment1$Comments) == 0, NA, Recruitment1$Comments) 
+null_Recs <- if("CR" %in% EstuaryCode) {rbind(filter(Recruitment1, Estuary == "CR" & ShellPosition >= 2 & ShellPosition <= 11) %>% filter(is.na(NumBottom) & is.na(Comments)) %>% select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments),
+                                              filter(Recruitment1, Estuary != "CR" & ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
+  filter(is.na(NumBottom) & is.na(Comments)) %>%
+  select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments))
+  } else {
+    filter(Recruitment1, ShellPosition >= 2 & ShellPosition <= 5 | ShellPosition >= 8 & ShellPosition <= 11) %>% 
+  filter(is.na(NumBottom) & is.na(Comments)) %>%
+  select(TripDate, DeployedDate, StationNumber, FixedLocationID, ShellReplicate, ShellPosition, NumBottom, Comments)}
+
+  # Out of range values
+Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
+  select(SampleEventID, StationNumber, TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate) %>%
+  distinct()
+# Code above reduces the number of records outside of the range by showing only distinct. If you need to view ALL records affected, substitute with the commented out code below.
+# Days_range <- filter(Recruitment1, NumDays < 21 | NumDays > 36) %>%
+#   select(TripDate, DeployedDate, NumDays, StationNumber, ShellReplicate, Comments)
+
+Spat_range <- filter(Recruitment1, NumBottom > 200) %>%
+  select(TripDate, DeployedDate, StationNumber, ShellReplicate, ShellPosition, NumBottom, Comments)
+  
+if (nrow(null_WQs) > 0) {
+  Mess_null_WQs = ""
+} else {
+  Mess_null_WQs = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(null_Recs) > 0) {
+  Mess_null_Recs = ""
+} else {
+  Mess_null_Recs = "Congratulations! No unexpected null values detected."
+}
+
+if (nrow(Temp_range) > 0 | nrow(Sal_range) > 0 | nrow(DO_range) > 0 | nrow(pH_range) > 0 | nrow(Depth_range) > 0 | nrow(SampleDepth_range) > 0 | nrow(Secchi_range) > 0 | nrow(TurbidityYSI_range) > 0 | nrow(TurbidityHach_range)) {
+  MessWQ_ranges = ""
+} else {
+  MessWQ_ranges = "Congratulations! No out of range values detected."
+}
+
+if (nrow(Days_range) > 0 & nrow(Spat_range) > 0) {
+  MessRec_ranges = ""
+} else {
+  MessRec_ranges = "Congratulations! No out of range values detected."
+}
+
+#List of stored procedure lines
+for(i in list(EstuaryCode)) {
+  checks <- NULL
+  checks[i] <- paste0("EXECUTE [dbo].[spChecksRecruitment] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
+  }
+```
+
+These data checks were run on trips occurring between
+<p2>`r CheckStart`</p2> and <p2>`r CheckEnd`</p2>\
+from the site(s) <p2> `r EstuaryCode` </p2>\
+by <p2>`r DataManager`</p2> on
+<p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
+
+`r kable(TripInfo2, caption = "Data from these trips is included in these checks.")`
+
+`r kable(Rcrt_dates, caption = "Trips included have the following deployment dates.")`
+
+<h2>Database Errors:</h2>
+
+<h1>`r MessERR_Tables1`</h1> <p2>`r MessERR_Tables2`</p2>
+
+`r if (nrow(ERR_Table1) > 0) {kable(ERR_Table1, caption = "Duplicate Primary Keys. Primary Keys MUST be unique!")}`
+
+`r if (nrow(ERR_Table2) > 0) {kable(ERR_Table2, caption = "Orphan Foreign Keys. Foreign Keys MUST have a parent!")}`
+
+`r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! Only exception is on DEPLOY ONLY events.")}`
+
+`r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
+
+`r if (nrow(TripInfo_nulls) > 0) {kable(TripInfo_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SampleEvent_nulls) > 0) {kable(SampleEvent_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(SampleEventWQ_nulls) > 0) {kable(SampleEventWQ_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+`r if (nrow(Recruitment_nulls) > 0) {kable(Recruitment_nulls, caption = "Critical Nulls. These fields MUST contain data!")}`
+
+<h2>Data Errors:</h2>
+
+<h3>~ ~ ~ ~ ~ ~ ~ Unexpected null values ~ ~ ~ ~ ~ ~ ~</h3>
+
+The following fields are expected to either contain data or have a
+comment explaining why the data is missing.
+
+<h4>--- Water Quality ---</h4>
+
+<p2>`r Mess_null_WQs`</p2>
+
+`r if (nrow(null_WQs) > 0) {kable(null_WQs, caption = "Null Water Quality Data. Comment Required for all Null values")}`
+
+<h4>--- Recruitment ---</h4>
+
+<p2>`r Mess_null_Recs`</p2>
+
+`r if (nrow(null_Recs) > 0) {kable(null_Recs, caption = "Null Recruitment Data. Comment Required for all Null values")}`
+
+<h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
+
+Value ranges below represent historically high or low values. Actual
+values can be outside that range and may or may not require a Comment.
+
+<h4>--- Water Quality ---</h4>
+
+<p2>`r MessWQ_ranges`</p2>
+
+`r if (nrow(Temp_range) > 0) {kable(Temp_range, caption = "Out of range temperature data. Expected range is 10.0°C to 34.0°C. Comment required for out of range values.")}`
+
+`r if (nrow(Sal_range) > 0) {kable(Sal_range, caption = "Out of range Salinity data. Expected range is 0.5 to 35.0 ppt. Comment required for out of range values.")}`
+
+`r if (nrow(DO_range) > 0) {kable(DO_range, caption = "Out of range calculated dissolved oxygen data. Expected range is 50% to 150% saturation. Comment required for out of range values.")}`
+
+`r if (nrow(DOPct_range) > 0) {kable(DOPct_range, caption = "Out of range percent dissolved oxygen data. Expected range is 20% to 150% saturation. Comment required for out of range values.")}`
+
+
+`r if (nrow(pH_range) > 0) {kable(pH_range, caption = "Out of range pH data. Expected range is 7.0 to 8.5. Comment required for out of range values.")}`
+
+`r if (nrow(Depth_range) > 0) {kable(Depth_range, caption = "Out of range depth data. Expected range is 0.0 to 3.5 m. Cannot be less than 0. Comment required for out of range values.")}`
+
+`r if (nrow(SampleDepth_range) > 0) {kable(SampleDepth_range, caption = "Out of range Sample depth data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
+
+`r if (nrow(Secchi_range) > 0) {kable(Secchi_range, caption = "Out of range Secchi data. Expected range is 0.0 m to 'Depth'. Cannot be less than 0 or exceed 'Depth'")}`
+
+`r if (nrow(TurbidityYSI_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
+
+`r if (nrow(TurbidityHach_range) > 0) {kable(TurbidityYSI_range, caption = "Out of range Turbidity data. Expected range is -2.0 to 30 NTU. Comment required for out of range values.")}`
+
+<h4>--- Recruitment ---</h4>
+
+<p2>`r MessRec_ranges`</p2>
+
+`r if (nrow(Days_range) > 0) {kable(Days_range, caption = "Out of range number of days deployed. Expected range is 21 to 36 days. Confirm out of range values. No comment required.")}`
+
+`r if (nrow(Spat_range) > 0) {kable(Spat_range, caption = "Out of range Spat count data. Expected range is 0 to 50 spat. Comment required for out of range values.")}`
+
+<h2>SQL Code:</h2>
+
+If there are no Database Errors detected and all Data Errors have been
+addressed, you may use the following SQL code to Complete these data.
+This code will update the DataStatus, CompletedBy, and DateCompleted
+fields; it will copy the data to the hsdb schema; and it will remove the
+data from the dbo schema.
+
+<p2>It is recommended that you test this query in your local instance
+BEFORE executing it on fwcsqlint.</p2>
+
+`r paste(checks, collapse = "<br>")`
+
+`r knit_exit()`
+
+```{sql SQL code, eval=FALSE, include=TRUE}
+
+--- This code creates a stored procedure in the database. 
+-- To do so, copy and paste this code VERBATIM into SSMS
+-- DO NOT RUN THIS CODE WITH R --
+
+CREATE PROCEDURE [dbo].[spChecksRecruitment](
+	@CheckStart AS DATE,
+	@CheckEnd AS DATE,
+	@EstuaryCode AS VARCHAR(2),
+	@DataManager AS VARCHAR(max)
+	)
+AS
+BEGIN
+	DECLARE @CompletedDate DATE;
+	SET @CompletedDate = cast(getDate() as date);
+
+	IF OBJECT_ID('tempdb..#ValidTrips') IS NOT NULL
+	BEGIN
+		DROP TABLE #ValidTrips;
+	END
+
+	CREATE TABLE #ValidTrips (
+		TripID VARCHAR(50)
+	);
+
+	INSERT INTO #ValidTrips (TripID)
+	SELECT TripID
+	FROM TripInfo
+	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
+	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'RCRT%');
+
+	-- Query the TripInfo table using the temporary table
+	UPDATE TripInfo 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+	-- Query the SampleEvent table using the temporary table
+	UPDATE SampleEvent 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
+
+	-- Query the SampleEventWQ table using the temporary table
+	UPDATE SampleEventWQ 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
+	-- Query the Recruitment table using the temporary table
+	UPDATE Recruitment 
+	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
+	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
+
+	-- Insert the Completed data into hsdb, and DELETE FROM dbo
+	INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
+
+	DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
+
+	INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
+
+	DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
+
+	INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
+
+	DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
+
+	INSERT INTO hsdb.Recruitment SELECT * FROM Recruitment WHERE DataStatus = 'Completed';
+
+	DELETE FROM dbo.Recruitment WHERE DataStatus = 'Completed';
+
+END
+
+```
