@@ -10,8 +10,8 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2005-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2005-12-30")  # End Date for Checks
+CheckStart <- as.Date("2008-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2008-12-30")  # End Date for Checks
 DataManager = "Erica Levine"
 Database = "Oysters_24-12-04"
 Server = "localhost\\ERICALOCALSQL"
@@ -135,7 +135,7 @@ Recruitment1 <- hsdbRecruitment %>%
   arrange(TripDate, StationNumber, ShellID) %>%
   filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
 
-Rcrt_dates <- Recruitment1  %>% mutate(SampleEvent = substr(SampleEventID, 1, 17)) %>% dplyr::select(SampleEvent, FixedLocationID, Estuary, StationNumber, DeployedDate, NumDays, Comments) %>% unique() %>% arrange(SampleEvent) %>% group_by(SampleEvent, Estuary, DeployedDate, NumDays) %>% mutate(FLIDs = paste0(FixedLocationID, collapse = ", "), Stations = paste0(StationNumber, collapse = ", "), Comments_all = paste0(Comments, collapse = " :: ")) %>% dplyr::select(-c(FixedLocationID, StationNumber, Comments)) %>% unique()
+Rcrt_dates <- Recruitment1  %>% mutate(SampleEvent = substr(SampleEventID, 1, 17)) %>% dplyr::select(SampleEvent, FixedLocationID, Estuary, SectionName, StationNumber, DeployedDate, NumDays, Comments) %>% unique() %>% arrange(SampleEvent) %>% group_by(SampleEvent, Estuary, SectionName, DeployedDate, NumDays) %>% mutate(FLIDs = paste0(FixedLocationID, collapse = ", "), Stations = paste0(StationNumber, collapse = ", "), Comments_all = paste0(Comments, collapse = " :: ")) %>% dplyr::select(-c(FixedLocationID, StationNumber, Comments)) %>% unique()
 
 ```
 
