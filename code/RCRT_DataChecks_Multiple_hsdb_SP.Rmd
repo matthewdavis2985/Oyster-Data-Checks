@@ -10,10 +10,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2008-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2008-12-30")  # End Date for Checks
+CheckStart <- as.Date("2009-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2009-12-30")  # End Date for Checks
 DataManager = "Erica Levine"
-Database = "Oysters_24-12-04"
+Database = "Oysters_24-12-18"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = c("TB")  #params$[project] or use 2-letter code in Primary Keys for single estuary
@@ -457,7 +457,7 @@ BEFORE executing it on fwcsqlint.</p2>
 -- To do so, copy and paste this code VERBATIM into SSMS
 -- DO NOT RUN THIS CODE WITH R --
 
-CREATE PROCEDURE [dbo].[spChecksRecruitment](
+CREATE PROCEDURE [hsdb].[spChecksRecruitment](
 	@CheckStart AS DATE,
 	@CheckEnd AS DATE,
 	@EstuaryCode AS VARCHAR(2),
@@ -506,19 +506,11 @@ BEGIN
 	-- Insert the Completed data into hsdb, and DELETE FROM dbo
 	INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
 
-	DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
-
 	INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
-
-	DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
 
 	INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
 
-	DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
-
 	INSERT INTO hsdb.Recruitment SELECT * FROM Recruitment WHERE DataStatus = 'Completed';
-
-	DELETE FROM dbo.Recruitment WHERE DataStatus = 'Completed';
 
 END
 
