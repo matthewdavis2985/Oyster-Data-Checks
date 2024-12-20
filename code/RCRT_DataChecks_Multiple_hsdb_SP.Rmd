@@ -10,8 +10,8 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2009-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2009-12-30")  # End Date for Checks
+CheckStart <- as.Date("2020-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2020-12-30")  # End Date for Checks
 DataManager = "Erica Levine"
 Database = "Oysters_24-12-18"
 Server = "localhost\\ERICALOCALSQL"
@@ -132,8 +132,7 @@ Recruitment1 <- hsdbRecruitment %>%
          NumDays = as.numeric(interval(DeployedDate, TripDate), "days")) %>%
   filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "RCRT" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, Recruitment1, by = c("FixedLocationID")) %>%
-  arrange(TripDate, StationNumber, ShellID) %>%
-  filter(case_when(Estuary == "TB" ~ ShellPosition < 7, T ~ ShellPosition < 15))
+  arrange(TripDate, StationNumber, ShellID)
 
 Rcrt_dates <- Recruitment1  %>% mutate(SampleEvent = substr(SampleEventID, 1, 17)) %>% dplyr::select(SampleEvent, FixedLocationID, Estuary, SectionName, StationNumber, DeployedDate, NumDays, Comments) %>% unique() %>% arrange(SampleEvent) %>% group_by(SampleEvent, Estuary, SectionName, DeployedDate, NumDays) %>% mutate(FLIDs = paste0(FixedLocationID, collapse = ", "), Stations = paste0(StationNumber, collapse = ", "), Comments_all = paste0(Comments, collapse = " :: ")) %>% dplyr::select(-c(FixedLocationID, StationNumber, Comments)) %>% unique()
 
