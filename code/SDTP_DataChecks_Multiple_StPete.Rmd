@@ -10,10 +10,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2025-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2025-01-30")  # End Date for Checks
+CheckStart <- as.Date("2025-02-01")  # Start Date for Checks
+CheckEnd <- as.Date("2025-02-28")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_25-01-25"
+Database = "Oysters_25-02-27"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = c("LW")  #params$[project] or use 2-letter code in Primary Keys for single estuary
@@ -376,7 +376,7 @@ Days_range <- filter(SedimentTrap1, NumDays < 21 | NumDays > 36) %>%
 
 Tare_ranges <- filter(SedimentTrap1, FilterTareWeight < 0 | FilterTareWeight > 3.50 | PanTareWeight < 0 | PanTareWeight > 400.00) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, PanTareWeight, Comments)
-Dry_ranges <- filter(SedimentTrap1, FilterDryWeight < FilterTareWeight | FilterDryWeight > 12.5 | PanDryWeight < PanTareWeight | PanDryWeight > 600 | CrucibleDW < TareCrucible | AshWeight < TareCrucible) %>%
+Dry_ranges <- filter(SedimentTrap1, FilterDryWeight < FilterTareWeight | FilterDryWeight > 12.5 | PanDryWeight < PanTareWeight | PanDryWeight > 600 | CrucibleDW < TareCrucible | AshWeight < TareCrucible | CrucibleDW < AshWeight) %>%
   select(TripDate, DeployedDate, StationNumber, CupSampleID, FilterTareWeight, FilterDryWeight, PanTareWeight, PanDryWeight, TareCrucible, CrucibleDW, AshWeight, Comments)
 if(nrow(Dry_ranges) > 0) {
   Dry_ranges <- Dry_ranges %>% 
@@ -385,7 +385,8 @@ if(nrow(Dry_ranges) > 0) {
                              PanDryWeight < PanTareWeight ~ "Small Pan DW",
                              PanDryWeight > 600 ~ "Large Pan DW",
                              CrucibleDW < TareCrucible ~ "Small Crucible DW",
-                             AshWeight < TareCrucible ~ "Small Ash Weight"))
+                             AshWeight < TareCrucible ~ "Small Ash Weight",
+                             CrucibleDW < AshWeight ~ "Crucible DW is less than AW"))
 }
 
 Biota_ranges <- filter(SedimentTrap1, NumDrills < 0 | NumDrills > 8 | NumCrabs < 0 | NumCrabs > 5 | NumHermitCrabs < 0 | NumHermitCrabs > 30 | NumFish < 0 | NumFish > 3 | NumOtherBiota < 0 | NumOtherBiota > 20) %>%
