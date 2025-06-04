@@ -13,10 +13,10 @@ params:
 CheckStart <- as.Date("2025-05-01")  # Start Date for Checks
 CheckEnd <- as.Date("2025-05-30")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_test"
+Database = "Oysters_25-06-04"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = c(params$CERP, params$PBC, params$TIG)  #params$[project] or use 2-letter code in Primary Keys for single estuary
+EstuaryCode = c(params$TIG)  #params$[project] or use 2-letter code in Primary Keys for single estuary
 
 ```
 
