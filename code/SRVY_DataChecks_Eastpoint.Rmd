@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2023-12-31")  # End Date for Checks
+CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-12-31")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20240318"
+Database = "OysterLocalMD20250522"
 Server = "localhost\\LOCALSQL"
 ```
 
@@ -109,7 +109,7 @@ DBI::dbDisconnect(con)
 ```
 
 ```{r DataFilters}
-# Filter data frames so that only data collected from Recruitment trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
+# Filter data frames so that only data collected from Survey trips in the specified Estuary, in the correct date range, which have been Proofed, are present.
 FixedLocations1 <- dboFixedLocations %>% 
   mutate(StationNumber = as.numeric(StationNumber),
          FixedLat = LatitudeDec,
@@ -284,11 +284,11 @@ for (i in seq_along(sorc)) {
 }
 ERR_Table3 <- distinct(ERR_Table3) 
 
-# Ensure there are 15 quadrats per SampleEvent
+# Ensure there are 10 or 15 quadrats per SampleEvent
 ERR_Table3a <- as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
   rename("SampleEventID" = "Var1",
          "NumOfQuads" = "Freq") %>%
-  filter(NumOfQuads != 15)
+  filter(!NumOfQuads %in% c(10, 15))
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
@@ -393,12 +393,12 @@ TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach
 
 # We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 SurveyQuadrat1$Comments <- ifelse(nchar(SurveyQuadrat1$Comments) == 0, NA, SurveyQuadrat1$Comments) 
-null_SurveyQuads <- filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.na(TotalVolume) | is.na(TotalWeight) | is.na(NumDrills) & !is.na(Comments)) %>%
-  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments)
+null_SurveyQuads <- filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.na(NumLegal) | is.na(TotalWeight) | is.na(NumDrills) & !is.na(Comments)) %>%
+  select(QuadratID, NumLive, NumDead, NumLegal, TotalWeight, NumDrills, Comments)
 
   # Out of range values
-SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | TotalVolume < 0.05 | TotalVolume > 5.0 | TotalWeight < 0.1 | TotalWeight > 10.00 | TotalVolume < TotalWeight*0.35 | TotalVolume > TotalWeight*0.65 | NumDrills < 0 | NumDrills > 5) %>%
-  select(QuadratID, NumLive, NumDead, TotalVolume, TotalWeight, NumDrills, Comments) 
+SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | NumLegal < 0 | TotalVolume > 30 | TotalWeight < 0.1 | TotalWeight > 10.00 | NumDrills < 0 | NumDrills > 5) %>%
+  select(QuadratID, NumLive, NumDead, NumLegal, TotalWeight, NumDrills, Comments) 
 
 ## SurveySH #
   # Unexpected Null values
@@ -425,7 +425,14 @@ SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the numb
   left_join(initialSHmeasurement, by = c("QuadratID")) %>%
   select(QuadratID, QuadratNumber, NumLive, NumMeasured, InitialSH, Comments.x) 
 
-
+LegalMeasures <- SurveySH1 %>% # Counts up the number of Legal measurements that were made
+  group_by(QuadratID) %>%
+  summarise(count_legals = sum(!is.na(ShellHeight) & ShellHeight > 75)) %>% #Sums legal-sized ShellHeight per QuadratID
+  left_join(SurveyQuadrat1, by = c("QuadratID")) %>% 
+  filter(NumLive < 51) %>% # filters out quadrats where more than 50 oysters are measured
+  filter(is.na(NumLegal) | count_legals != NumLegal) %>% # keeps mismatched legal counts
+  select(QuadratID, NumLegal, count_legals, Comments)
+  
 Over50Measured <- SHmeasures %>%
   filter(NumMeasured > 50) %>%
   mutate(ErrorColumn = "Over 50 measured")
@@ -509,7 +516,7 @@ by <p2>`r DataManager`</p2> on
 
 `r if (nrow(ERR_Table3) > 0) {kable(ERR_Table3, caption = "Childless Primary Keys. Primary Keys MUST have at least one child record! SampleEvents must have 15 child records unless a valid comment is present.")}`
 
-`r if (nrow(ERR_Table3a) > 0) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 15 child records unless a valid comment is present.")}`
+`r if (nrow(ERR_Table3a) > 0) {kable(ERR_Table3a, caption = "Childless Primary Keys. SampleEvents must have 10 (Restoration) or 15 (Historic) child records unless a valid comment is present.")}`
 
 `r if (nrow(ERR_Table4) > 0) {kable(ERR_Table4, caption = "Malformed Keys. Primary Keys MUST contain its Foreign Key!")}`
 
@@ -589,7 +596,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessSurveyQuad_ranges`</p2>
 
-`r if (nrow(SurveyQuad_range) > 0) {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 500. Expected range for NumDead is 0 to 300. Expected range for TotalVolume is 0.05 to 5.0 L. Expected range for TotalWeight is 0.10 to 10.00 kg. Expected range for Volume is 35% to 65% of Weight. Expected range for NumDrills is 0 to 5. Comment required for out of range values.")}`
+`r if (nrow(SurveyQuad_range) > 0) {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 500. Expected range for NumDead is 0 to 300. Expected range for NumLegal is 0 to 30. Expected range for TotalWeight is 0.10 to 10.00 kg. Expected range for NumDrills is 0 to 5. Comment required for out of range values.")}`
 
 <h4>--- Survey Shell Heights ---</h4>
 
@@ -598,6 +605,8 @@ values can be outside that range and may or may not require a Comment.
 `r if (nrow(SurveySH_range) > 0) {kable(SurveySH_range, caption = "Out of range Shell Height data. Expected range for ShellHeight is 1 to 150 mm. Cannot be 0. Comment required for out of range values.")}`
 
 `r if (nrow(SHMismatch) > 0) {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
+
+`r if (nrow(LegalMeasures) > 0) {kable(LegalMeasures, caption = "Mismatched number legal (> 75 mm SH) measured and reported as NumLegal. NumLegal must equal count_Legals, unless: NumLive is greater than 50. Comment required for mismatched values.")}`
 
 <h2>SQL Code:</h2>
 
