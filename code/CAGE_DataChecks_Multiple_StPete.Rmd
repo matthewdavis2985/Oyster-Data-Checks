@@ -8,13 +8,13 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2023-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-03-31")  # End Date for Checks
-DataManager = "Erica Levine"
-Database = "Oysters_24-10-24"
+CheckStart <- as.Date("2025-05-01")  # Start Date for Checks
+CheckEnd <- as.Date("2025-05-28")  # End Date for Checks
+DataManager = "Erica Williams"
+Database = "Oysters_test"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = "LX" #params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
+EstuaryCode = params$Sites #params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
 
 ```
 

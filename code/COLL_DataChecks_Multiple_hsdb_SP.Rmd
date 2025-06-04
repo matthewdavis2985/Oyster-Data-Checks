@@ -11,13 +11,13 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2025-05-01")  # Start Date for Checks
-CheckEnd <- as.Date("2025-05-30")  # End Date for Checks
-DataManager = "Erica Williams"
-Database = "Oysters_test"
+CheckStart <- as.Date("2019-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2019-12-30")  # End Date for Checks
+DataManager = "Erica Levine"
+Database = "Oysters_24-12-18"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = c(params$CERP, params$PBC)  #params$[project] or use 2-letter code in Primary Keys for single estuary
+EstuaryCode = c("TB")  #params$[project] or use 2-letter code in Primary Keys for single estuary
 
 ```
 
@@ -84,38 +84,20 @@ dboFixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>%
 hsdbTripInfo <- tbl(con,in_schema("hsdb", "TripInfo")) %>%
   collect() 
 
-dboTripInfo <- tbl(con,in_schema("dbo", "TripInfo")) %>%
-  collect() 
-  
 hsdbSampleEvent <- tbl(con,in_schema("hsdb", "SampleEvent")) %>%
   collect() 
   
-dboSampleEvent <- tbl(con,in_schema("dbo", "SampleEvent")) %>%
-  collect() 
-
 hsdbSampleEventWQ <- tbl(con,in_schema("hsdb", "SampleEventWQ")) %>%
-  collect() 
-
-dboSampleEventWQ <- tbl(con,in_schema("dbo", "SampleEventWQ")) %>%
   collect() 
 
 hsdbCI <- tbl(con,in_schema("hsdb", "ConditionIndex")) %>%
   collect() 
 
-dboCI <- tbl(con,in_schema("dbo", "ConditionIndex")) %>%
-  collect()
-
 hsdbDermo <- tbl(con,in_schema("hsdb", "Dermo")) %>%
   collect() 
 
-dboDermo <- tbl(con,in_schema("dbo", "Dermo")) %>%
-  collect()
-
 hsdbRepro <- tbl(con,in_schema("hsdb", "Repro")) %>%
   collect() 
-
-dboRepro <- tbl(con,in_schema("dbo", "Repro")) %>%
-  collect()
 
 DBI::dbDisconnect(con)
 
@@ -130,18 +112,18 @@ FixedLocations1 <- dboFixedLocations %>%
   select(FixedLocationID, Estuary, SectionName, StationNumber, FixedLat, FixedLon) %>% 
   distinct()
           
-TripInfo1 <- dboTripInfo %>% 
+TripInfo1 <- hsdbTripInfo %>% 
   filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL") %>%
   arrange(TripID)
 
-SampleEvent1 <- dboSampleEvent %>% 
+SampleEvent1 <- hsdbSampleEvent %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
   left_join(FixedLocations1, SampleEvent1, by = c("FixedLocationID")) %>%
   arrange(TripDate, StationNumber)
 
-SampleEventWQ1 <- dboSampleEventWQ %>% 
+SampleEventWQ1 <- hsdbSampleEventWQ %>% 
   mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventWQID, 19, 22)) %>%
   filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "COLL" & DataStatus == "Proofed") %>%
@@ -149,7 +131,7 @@ SampleEventWQ1 <- dboSampleEventWQ %>%
   arrange(TripDate, StationNumber, SampleEventWQID)
 
 #Get all CI data to check data status, then limit to proofed data for datachecks
-CI_t <- dboCI %>% 
+CI_t <- hsdbCI %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>%
   filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
@@ -158,7 +140,7 @@ CI_t <- dboCI %>%
 CI1 <- CI_t %>% filter(DataStatus == "Proofed")
 
 #Get all Dermo data to check data status, then limit to proofed data for datachecks
-Dermo_t <- dboDermo %>%
+Dermo_t <- hsdbDermo %>%
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22),
          DermoMantle = as.numeric(DermoMantle),
@@ -169,7 +151,7 @@ Dermo_t <- dboDermo %>%
 Dermo1 <- Dermo_t %>% filter(DataStatus == "Proofed")
 
 #Get all Repro data to check data status - don't limit to proofed since Dermo data is checked monthly, Repro checked quarterly
-Repro_t <- dboRepro %>% 
+Repro_t <- hsdbRepro %>% 
   mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
          FixedLocationID = substring(SampleEventID, 19, 22)) %>% 
   filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
@@ -187,44 +169,11 @@ Dermo_t %>% mutate(TripID = substring(SampleEventID, 1, 17)) %>% subset(TripID %
 Repro_t %>% mutate(TripID = substring(SampleEventID, 1, 17)) %>% subset(TripID %in% TripInfo1$TripID) %>%
   group_by(TripID, DataStatus) %>% summarise(Count = n()) %>% pivot_wider(names_from = DataStatus, names_glue = "R_{DataStatus}", values_from = Count))
 
-#"Historic" data
-hsdbTripInfo <- hsdbTripInfo %>% 
-  filter(substring(TripID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(TripID,3,6) == "COLL")  %>%
-  arrange(TripID)
-
-hsdbSampleEvent <- hsdbSampleEvent %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL") %>%
-  arrange(TripDate)
-
-hsdbSampleEventWQ <- hsdbSampleEventWQ %>% 
-  mutate(TripDate = as.Date(substring(SampleEventWQID, 8, 15), format = "%Y%m%d")) %>%
-  filter(substring(SampleEventWQID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventWQID,3,6) == "COLL") %>%
-  arrange(TripDate)
-
-hsdbCI <- hsdbCI %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  arrange(TripDate)
-
-hsdbDermo <- hsdbDermo %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  arrange(TripDate)
-
-hsdbRepro <- hsdbRepro %>% 
-  mutate(TripDate = as.Date(substring(SampleEventID, 8, 15), format = "%Y%m%d"),
-         FixedLocationID = substring(SampleEventID, 19, 22)) %>%
-  filter(substring(SampleEventID,1,2) %in% EstuaryCode & TripDate >= CheckStart & TripDate <= CheckEnd & substring(SampleEventID,3,6) == "COLL" & DataStatus == "Proofed") %>%
-  arrange(TripDate)
-
 ```
 
 ```{r DatabaseErrors}
 ### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the dbo schema
+# Ensure the Primary Keys are unique in the hsdb schema
 ERR_Table1 <- data.frame()
 ERR_Table1a <- data.frame()
 ERR_Table1b <- data.frame()
@@ -234,62 +183,43 @@ ERR_Table1e <- data.frame()
 ERR_Table1f <- data.frame()
 
 if (nrow(TripInfo1[duplicated(TripInfo1$TripID), ]) > 0) {
-  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
+  ERR_Table1a <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "TripInfo", TripInfo1[duplicated(TripInfo1$TripID), ])) %>% 
     mutate(PrimaryKey = TripID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEvent1[duplicated(SampleEvent1$SampleEventID), ]) > 0) {
-  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
+  ERR_Table1b <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEvent", SampleEvent1[duplicated(SampleEvent1$SampleEventID), ])) %>% 
     mutate(PrimaryKey = SampleEventID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
-  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
+  ERR_Table1c <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "SampleEventWQ", SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ])) %>% 
     mutate(PrimaryKey = SampleEventWQID) %>% 
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(CI1[duplicated(CI1$OysterID), ]) > 0) {
-  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "ConditionIndex", CI1[duplicated(CI1$OysterID), ])) %>% 
+  ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "ConditionIndex", CI1[duplicated(CI1$OysterID), ])) %>% 
     mutate(PrimaryKey = OysterID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(Dermo1[duplicated(Dermo1$OysterID), ]) > 0) {
-  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Dermo", Dermo1[duplicated(Dermo1$OysterID), ])) %>% 
+  ERR_Table1e <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "Dermo", Dermo1[duplicated(Dermo1$OysterID), ])) %>% 
     mutate(PrimaryKey = OysterID) %>%
     select(schema, Table, PrimaryKey)
 }
 
 if (nrow(Repro1[duplicated(Repro1$OysterID), ]) > 0) {
-  ERR_Table1f <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "Repro", Repro1[duplicated(Repro1$OysterID), ])) %>% 
+  ERR_Table1f <- bind_rows(ERR_Table1, data.frame(schema = "hsdb", Table = "Repro", Repro1[duplicated(Repro1$OysterID), ])) %>% 
     mutate(PrimaryKey = OysterID) %>%
     select(schema, Table, PrimaryKey)
 }
 
-### DATABASE ERRORS ###
-# Ensure the Primary Keys are unique in the hsdb schema
-ERR_Tablex <- data.frame()
-sorc <- list(TripInfo1$TripID, SampleEvent1$SampleEventID, SampleEventWQ1$SampleEventWQID, CI1$OysterID, Dermo1$OysterID, Repro1$OysterID)
-dest <- list(hsdbTripInfo$TripID, hsdbSampleEvent$SampleEventID, hsdbSampleEventWQ$SampleEventWQID, hsdbCI$OysterID, hsdbDermo$OysterID, hsdbRepro$OysterID)
-tabl <- list("TripInfo", "SampleEvent", "SampleEventWQ", "ConditionIndex", "Dermo", "Repro")
-
-# Loop through values
-for (i in seq_along(sorc)) {
-  for (j in seq_along(sorc[[i]])) {
-    check_id <- sorc[[i]][j]
-  # Check if the trip_id exists in TripInfo$TripID
-    if ((check_id %in% dest[[i]])) {
-    # Add trip_id to ERR_Table
-      ERR_Tablex <- rbind(ERR_Tablex, data.frame(schema = "hsdb", Table = tabl[[i]], PrimaryKey = check_id))
-    }
-  }
-}
-
-ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f, ERR_Tablex)
-rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f, ERR_Tablex)
+ERR_Table1 <- rbind(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f)
+rm(ERR_Table1a, ERR_Table1b, ERR_Table1c, ERR_Table1d, ERR_Table1e, ERR_Table1f)
 
 
 ### DATABASE ERRORS ###
@@ -367,27 +297,27 @@ ERR_Table4c <- Repro1 %>%
 
 ### DATABASE ERRORS ###
 # Ensure that any field that MUST have a value is not null
-TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(TripID, TripDate, TripType, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+TripInfo_nulls <- filter(TripInfo1, is.na(TripID) | is.na(TripType) | is.na(TripDate) ) %>%
+  select(TripID, TripDate, TripType, Comments)
 
-SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed)) %>%
-  select(SampleEventID, TripID, FixedLocationID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEvent_nulls <- filter(SampleEvent1, is.na(SampleEventID) | is.na(TripID) | is.na(FixedLocationID)) %>%
+  select(SampleEventID, TripID, FixedLocationID, Comments)
 
-SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(SampleEventWQID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+SampleEventWQ_nulls <- filter(SampleEventWQ1, is.na(SampleEventWQID) | is.na(SampleEventID)) %>%
+  select(SampleEventWQID, SampleEventID, Comments)
 
-ConditionIndex_nulls <- filter(CI1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+ConditionIndex_nulls <- filter(CI1, is.na(OysterID) | is.na(SampleEventID)) %>%
+  select(OysterID, SampleEventID, Comments)
 
-Dermo_nulls <- filter(Dermo1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+Dermo_nulls <- filter(Dermo1, is.na(OysterID) | is.na(SampleEventID)) %>%
+  select(OysterID, SampleEventID, Comments)
 
-Repro_nulls <- filter(Repro1, is.na(OysterID) | is.na(SampleEventID) | is.na(EnteredBy) | is.na(DateEntered) | is.na(ProofedBy) | is.na(DateProofed) ) %>%
-  select(OysterID, SampleEventID, EnteredBy, DateEntered, ProofedBy, DateProofed, Comments)
+Repro_nulls <- filter(Repro1, is.na(OysterID) | is.na(SampleEventID)) %>%
+  select(OysterID, SampleEventID, Comments)
 
 # Remove unneeded data frames and values
 
-rm(dboFixedLocations, dboRepro, dboDermo, dboCI, dboSampleEvent, dboSampleEventWQ, dboTripInfo, dest, FixedLocations1, hsdbRepro, hsdbDermo, hsdbCI, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
+rm(dest, FixedLocations1, hsdbRepro, hsdbDermo, hsdbCI, hsdbSampleEvent, hsdbSampleEventWQ, hsdbTripInfo, fkid, pkid, numb, sorc, tabl, check_id, i, j)
 
 # Set Error Messages for Database Errors
 
@@ -608,7 +538,7 @@ if (nrow(Repro_range) > 0) {
 #List of stored procedure lines
 for(i in list(EstuaryCode)) {
   checks <- NULL
-  checks[i] <- paste0("EXECUTE [dbo].[spChecksCollections] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
+  checks[i] <- paste0("EXECUTE [hsdb].[spChecksCollections] @CheckStart = &apos;", CheckStart, "&apos;, @CheckEnd = &apos;", CheckEnd, "&apos;, @EstuaryCode = &apos;", i, "&apos;, @DataManager = &apos;", DataManager, "&apos;;")
   }
 ```
 
@@ -761,7 +691,7 @@ BEFORE executing it on fwcsqlint.</p2>
 -- To do so, copy and paste this code VERBATIM into SSMS
 -- DO NOT RUN THIS CODE WITH R --
 
-CREATE PROCEDURE [dbo].[spChecksCollections](
+CREATE PROCEDURE [hsdb].[spChecksCollections](
 	@CheckStart AS DATE,
 	@CheckEnd AS DATE,
 	@EstuaryCode AS VARCHAR(2),
@@ -783,76 +713,40 @@ BEGIN
 
 	INSERT INTO #ValidTrips (TripID)
 	SELECT TripID
-	FROM dbo.TripInfo
+	FROM hsdb.TripInfo
 	WHERE TripDate >= @CheckStart AND TripDate <= @CheckEnd
 	AND DataStatus = 'Proofed' AND TripID like CONCAT(@EstuaryCode, 'COLL%');
 
 	-- Query the TripInfo table using the temporary table
-	UPDATE dbo.TripInfo 
+	UPDATE hsdb.TripInfo 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEvent table using the temporary table
-	UPDATE dbo.SampleEvent 
+	UPDATE hsdb.SampleEvent 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE TripID IN (SELECT TripID FROM #ValidTrips);
 
 	-- Query the SampleEventWQ table using the temporary table
-	UPDATE dbo.SampleEventWQ 
+	UPDATE hsdb.SampleEventWQ 
 	SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
 	WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
   -- Query the ConditionIndex table using the temporary table
-  UPDATE dbo.ConditionIndex 
+  UPDATE hsdb.ConditionIndex 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
   
   -- Query the Dermo table using the temporary table
-  UPDATE dbo.Dermo 
+  UPDATE hsdb.Dermo 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
   
   -- Query the Repro table using the temporary table
-  UPDATE dbo.Repro 
+  UPDATE hsdb.Repro 
   SET DataStatus = 'Completed', CompletedBy = @DataManager, DateCompleted = @CompletedDate
   WHERE SampleEventID IN (SELECT SampleEventID FROM SampleEvent WHERE TripID IN (SELECT TripID FROM #ValidTrips));
 
-  -- Insert the Completed data into hsdb, and DELETE FROM dbo
-  INSERT INTO hsdb.TripInfo SELECT * FROM TripInfo WHERE DataStatus = 'Completed';
-  
-  DELETE FROM dbo.TripInfo WHERE DataStatus = 'Completed';
-  
-  INSERT INTO hsdb.SampleEvent SELECT * FROM SampleEvent WHERE DataStatus = 'Completed';
-  
-  DELETE FROM dbo.SampleEvent WHERE DataStatus = 'Completed';
-  
-  INSERT INTO hsdb.SampleEventWQ SELECT * FROM SampleEventWQ WHERE DataStatus = 'Completed';
-  
-  DELETE FROM dbo.SampleEventWQ WHERE DataStatus = 'Completed';
-  
-  INSERT INTO hsdb.ConditionIndex 
-  (OysterID, SampleEventID, ShellHeight, ShellLength, ShellWidth, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes)
-  SELECT 
-  OysterID, SampleEventID, ShellHeight, ShellLength, ShellWidth, TotalWeight, TarePanWeight, TissueWetWeight, ShellWetWeight, TissueDryWeight, ShellDryWeight, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes
-  FROM ConditionIndex WHERE DataStatus = 'Completed';
-  
-  DELETE FROM dbo.ConditionIndex WHERE DataStatus = 'Completed';
-  
-  INSERT INTO hsdb.Dermo 
-  (OysterID, SampleEventID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments,	AdminNotes)
-  SELECT 
-  OysterID, SampleEventID, ShellHeight, ShellLength, ShellWidth, TotalWeight, ShellWetWeight, DermoMantle, DermoGill, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes
-  FROM Dermo WHERE DataStatus = 'Completed';
-  
-  DELETE FROM dbo.Dermo WHERE DataStatus = 'Completed';
-  
-  INSERT INTO hsdb.Repro 
-  (OysterID, SampleEventID, Sex, ReproStage, Parasite, BadSlide, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes)
-  SELECT OysterID, SampleEventID, Sex, ReproStage, Parasite, BadSlide, DataStatus, DateEntered, EnteredBy, DateProofed, ProofedBy, DateCompleted, CompletedBy, Comments, AdminNotes
-  FROM Repro WHERE DataStatus = 'Completed';
-  
-  DELETE FROM dbo.Repro WHERE DataStatus = 'Completed';
-  
 END
 
 ```

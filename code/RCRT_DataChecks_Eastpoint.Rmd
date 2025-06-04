@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-09-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-10-31")  # End Date for Checks
+CheckStart <- as.Date("2024-11-01")  # Start Date for Checks
+CheckEnd <- as.Date("2024-12-31")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20250214"
+Database = "OysterLocalMD20250512"
 Server = "localhost\\LOCALSQL"
 ```
 
