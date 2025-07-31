@@ -11,13 +11,13 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2025-03-01")  # Start Date for Checks
-CheckEnd <- as.Date("2025-04-30")  # End Date for Checks
+CheckStart <- as.Date("2025-06-01")  # Start Date for Checks
+CheckEnd <- as.Date("2025-06-30")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_25-06-04"
+Database = "Oysters_25-07-24"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = c("TB")  #params$[project] or use 2-letter code in Primary Keys for single estuary
+EstuaryCode = c(params$CERP)  #params$[project] or use 2-letter code in Primary Keys for single estuary
 
 ```
 

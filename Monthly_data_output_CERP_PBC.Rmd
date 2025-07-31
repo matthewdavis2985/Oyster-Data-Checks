@@ -1,0 +1,143 @@
+---
+title: "Monthly Data Output"
+author: "EWilliams"
+date: "2025-07-29"
+output: html_document
+---
+
+```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
+#Changes required.
+# Set your variables
+CheckStart <- as.Date("2025-06-01")  # Start Date for data to add
+CheckEnd <- as.Date("2025-06-30")  # End Date for data to add
+Database = "Oysters_25-07-23"
+Server = "localhost\\ERICALOCALSQL"
+data_file_location <- "//fwc-spfs1/FishBio/Molluscs/Oysters/R/CERP Reports/Summary data/CERP_PBC_Monthly_Data.xlsx"
+```
+
+```{r PackageLoad & VarSet, echo = FALSE, warning = FALSE, message = FALSE}
+#No changes needed.
+# Load necessary R packages
+if (!require("pacman")) {install.packages("pacman")}
+pacman::p_load(odbc, DBI, dbplyr,
+  tidyverse, dplyr,  #DF manipulation
+  openxlsx, lubridate, knitr, flextable,
+  install = TRUE)
+
+Estuaries = c("SL", "LX", "CR", "LW")
+```
+
+```{r DatabaseDownload, echo = FALSE}
+#No changes needed.
+#Connect to Local database server and pull all necessary data, then close connection 
+con <- dbConnect(odbc(),
+                    Driver = "SQL Server", 
+                    Server = Server,
+                    Database = Database,
+                    Authentication = "ActiveDirectoryIntegrated")
+
+#Basic station information:
+FixedLocations <- tbl(con,in_schema("dbo", "FixedLocations")) %>% collect() %>% 
+  filter(Estuary %in% Estuaries & str_starts(FixedLocationID, "0") & as.Date(EndDate) >= Sys.Date())
+TripInfo <- rbind(tbl(con,in_schema("dbo", "TripInfo")) %>% collect() %>% 
+  filter(substring(TripID, 1, 2) %in% Estuaries & as.Date(TripDate) >= CheckStart & as.Date(TripDate) <= CheckEnd),
+  tbl(con,in_schema("hsdb", "TripInfo")) %>% collect() %>% 
+  filter(substring(TripID, 1, 2) %in% Estuaries & as.Date(TripDate) >= CheckStart & as.Date(TripDate) <= CheckEnd))
+#
+#Water quality data:
+SampleEventWQ <- rbind(tbl(con,in_schema("hsdb", "SampleEventWQ")) %>% collect() %>%
+  filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID),
+  tbl(con,in_schema("dbo", "SampleEventWQ")) %>% collect() %>%
+  filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID))
+#
+#Recruitment data:
+Recruitment <- rbind(tbl(con,in_schema("hsdb", "Recruitment")) %>% collect() %>%
+  filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID), 
+  tbl(con,in_schema("dbo", "Recruitment")) %>% collect() %>%
+  filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID))
+#
+#Dermo data:
+Dermo <- rbind(tbl(con,in_schema("hsdb", "Dermo")) %>% collect() %>%
+  filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID) %>% dplyr::select(-OldSampleNumber),
+  tbl(con,in_schema("dbo", "Dermo")) %>% collect() %>%
+  filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID) %>%
+    mutate(DermoMantle = as.numeric(DermoMantle),
+         DermoGill = as.numeric(DermoGill)))
+#
+#Sediment data:
+Sediment <- rbind(tbl(con,in_schema("hsdb", "SedimentTrap")) %>% collect() %>%
+                    filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID),
+                  tbl(con,in_schema("dbo", "SedimentTrap")) %>% collect() %>%
+                    filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID))
+#Survey data:
+if(month(CheckStart) == 12){
+  Months <- c(12, seq(1, month(CheckEnd), by = 1))
+  } else {
+    Months <- seq(month(CheckStart), month(CheckEnd), by = 1)
+    }
+if(any(Months %in% c(3, 6, 9, 12))){
+  Survey <- rbind(tbl(con,in_schema("hsdb", "SurveyQuadrat")) %>% collect() %>%
+                    filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID),
+                  tbl(con,in_schema("dbo", "SurveyQuadrat")) %>% collect() %>%
+                    filter(substring(SampleEventID, 1, 17) %in% TripInfo$TripID))
+} else {
+                    Survey <- "Survey was not conducted"
+}
+#
+DBI::dbDisconnect(con)
+#
+```
+
+```{r Excel data, echo = FALSE}
+#No changes needed.
+#Load Excel sheets and determine new data:
+Excel_WQ <- readWorkbook(data_file_location, sheet = 'SampleEventWQ', detectDates = TRUE, colNames = TRUE, na.strings = c("NA")) 
+new_WQ <- SampleEventWQ %>% dplyr::select(SampleEventWQID:TurbidityYSI, Comments, CollectionTime, PercentDissolvedOxygen) %>% drop_na(Salinity) %>% filter(!(SampleEventWQID %in% unique(Excel_WQ$SampleEventWQID))) %>% mutate(Estuary = substring(SampleEventID, 1, 2), Date = substring(SampleEventID, 8, 16)) %>% arrange(Date, Estuary) %>% dplyr::select(-Estuary, - Date)
+#
+Excel_rcrt <-  readWorkbook(data_file_location, sheet = 'Recruitment', detectDates = TRUE, colNames = TRUE, na.strings = c("NA")) %>% mutate_at(c("Comments"), as.character)
+new_rcrt <- Recruitment %>% dplyr::select(ShellID:NumBottom, Comments) %>% arrange(ShellID) %>% mutate(DeployedDate = as.Date(DeployedDate)) %>% filter(!(ShellID %in% unique(Excel_rcrt$ShellID))) %>% mutate(Estuary = substring(SampleEventID, 1, 2), Date = substring(SampleEventID, 8, 16)) %>% arrange(Date, Estuary) %>% dplyr::select(-Estuary, - Date)
+#
+Excel_dermo <-  readWorkbook(data_file_location, sheet = 'Dermo', detectDates = TRUE, colNames = TRUE, na.strings = c("NA")) %>% mutate_at(c("Comments"), as.character)
+new_dermo <- Dermo %>% dplyr::select(OysterID:DermoGill, Comments) %>% arrange(OysterID) %>% mutate_at(c("ShellLength", "ShellWidth"), as.numeric) %>% filter(!(OysterID %in% unique(Excel_dermo$OysterID))) %>% mutate(Estuary = substring(SampleEventID, 1, 2), Date = substring(SampleEventID, 8, 16)) %>% arrange(Date, Estuary) %>% dplyr::select(-Estuary, - Date)
+#
+Excel_sdtp <-  readWorkbook(data_file_location, sheet = 'Sediment', detectDates = TRUE, colNames = TRUE, na.strings = c("NA")) %>% mutate_at(c("Comments"), as.character)
+new_sdtp <- Sediment %>% dplyr::select(CupSampleID:NumOtherBiota, Comments, Volume:CrucibleDW) %>% arrange(CupSampleID) %>% mutate_at(c("PortionofSample", "Volume"), as.numeric) %>% mutate(DeployedDate = as.Date(DeployedDate)) %>% filter(!(CupSampleID %in% unique(Excel_sdtp$CupSampleID))) %>% mutate(Estuary = substring(SampleEventID, 1, 2), Date = substring(SampleEventID, 8, 16)) %>% arrange(Date, Estuary) %>% dplyr::select(-Estuary, - Date)
+#
+if(any(Months %in% c(3, 6, 9, 12))){
+  Excel_srvy <-  readWorkbook(data_file_location, sheet = 'Survey', detectDates = TRUE, colNames = TRUE, na.strings = c("NA")) %>%
+    mutate_at(c("Comments"), as.character)
+  new_srvy <- Survey %>% dplyr::select(QuadratID:NumDrills, Comments, NumLegal) %>% arrange(QuadratID) %>%
+    mutate_at(c("NumDrills", "NumLegal"), as.numeric) %>% filter(!(QuadratID %in% unique(Excel_srvy$QuadratID))) %>% mutate(Estuary = substring(SampleEventID, 1, 2), Date = substring(SampleEventID, 8, 16)) %>% arrange(Date, Estuary) %>% dplyr::select(-Estuary, - Date)
+}
+#
+Trips <- TripInfo %>% filter(TripID %in% substring(new_rcrt$SampleEventID, 1, 17) | TripID %in% substring(new_dermo$SampleEventID, 1, 17) | TripID %in% substring(new_sdtp$SampleEventID, 1, 17)) %>%  dplyr::select(TripID, TripDate, TripType)
+
+if(any(Months %in% c(3, 6, 9, 12))){
+  Trips <- rbind(Trips,
+                 TripInfo %>% filter(TripID %in% substring(new_srvy$SampleEventID, 1, 17)) %>% dplyr::select(TripID, TripDate, TripType))
+} 
+#
+```
+
+```{r Data output, echo = FALSE}
+#No changes needed.
+#Load workbook of existing data
+  Data_wb <- loadWorkbook(data_file_location)
+  #Overwrite each sheet with new data appended to old
+  writeData(Data_wb, "SampleEventWQ", new_WQ, startRow = nrow(Excel_WQ)+2, colNames = FALSE)
+  writeData(Data_wb, "Recruitment", new_rcrt, startRow = nrow(Excel_rcrt)+2, colNames = FALSE)
+  writeData(Data_wb, "Dermo", new_dermo, startRow = nrow(Excel_dermo)+2, colNames = FALSE)
+  writeData(Data_wb, "Sediment", new_sdtp, startRow = nrow(Excel_sdtp)+2, colNames = FALSE)
+  if(any(Months %in% c(3, 6, 9, 12))){
+    writeData(Data_wb, "Survey", new_srvy, startRow = nrow(Excel_srvy)+2, colNames = FALSE)
+  }
+   #Save workbook
+  saveWorkbook(Data_wb, data_file_location, overwrite=TRUE)
+```
+
+# Summary
+\
+Monthly data was added to the CERP_PBC_Monthly_Data Excel file located on the network.
+\
+Data for the following trips was added:
+`r left_join(Trips %>% mutate(Estuary = substring(TripID, 1, 2)), FixedLocations, by = "Estuary", relationship = "many-to-many") %>% dplyr::select(TripDate, Estuary, FixedLocationID, StationName, TripType) %>% arrange(TripDate, Estuary, FixedLocationID) %>% flextable() %>% merge_v(j = c("TripDate", "Estuary", "FixedLocationID", "StationName")) %>% border(i = ~ TripDate != lag(TripDate, default = TripDate[1]) | Estuary != lag(Estuary, default = Estuary[1]), border.top = officer::fp_border(width = 1, color = "black"), part = "body") %>% autofit()`
