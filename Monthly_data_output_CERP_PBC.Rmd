@@ -12,7 +12,7 @@ CheckStart <- as.Date("2025-06-01")  # Start Date for data to add
 CheckEnd <- as.Date("2025-06-30")  # End Date for data to add
 Database = "Oysters_25-07-23"
 Server = "localhost\\ERICALOCALSQL"
-data_file_location <- "//fwc-spfs1/FishBio/Molluscs/Oysters/R/CERP Reports/Summary data/CERP_PBC_Monthly_Data.xlsx"
+data_file_location <- ...
 ```
 
 ```{r PackageLoad & VarSet, echo = FALSE, warning = FALSE, message = FALSE}
