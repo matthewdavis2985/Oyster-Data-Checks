@@ -8,10 +8,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2025-05-01")  # Start Date for Checks
-CheckEnd <- as.Date("2025-05-28")  # End Date for Checks
+CheckStart <- as.Date("2025-08-01")  # Start Date for Checks
+CheckEnd <- as.Date("2025-08-28")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_test"
+Database = "Oysters_25-08-29"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = params$Sites #params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single

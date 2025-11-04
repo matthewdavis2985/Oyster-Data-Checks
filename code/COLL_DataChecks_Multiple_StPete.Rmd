@@ -4,20 +4,20 @@ subtitle: "Condition Index, Dermo, and Repro"
 output:
   html_document:
 params:
-    CERP: ["SL", "LX", "LW", "CR"] 
+    CERP: ["SL", "LX", "CR"] 
     PBC: "LW"
     TIG: ["TB", "CR"]
 ---
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2025-05-01")  # Start Date for Checks
-CheckEnd <- as.Date("2025-05-30")  # End Date for Checks
+CheckStart <- as.Date("2025-08-01")  # Start Date for Checks
+CheckEnd <- as.Date("2025-08-30")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_test"
+Database = "Oysters_25-08-29"
 Server = "localhost\\ERICALOCALSQL"
 
-EstuaryCode = c(params$CERP, params$PBC)  #params$[project] or use 2-letter code in Primary Keys for single estuary
+EstuaryCode = c(params$CERP)  #params$[project] or use 2-letter code in Primary Keys for single estuary
 
 ```
 
