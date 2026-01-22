@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2025-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2025-02-28")  # End Date for Checks
-EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
+CheckStart <- as.Date("2025-07-01")  # Start Date for Checks
+CheckEnd <- as.Date("2025-09-30")  # End Date for Checks
+EstuaryCode = "PE"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20250804"
+Database = "OysterLocalMD20260122"
 Server = "localhost\\LOCALSQL"
 ```
 
@@ -21,7 +21,7 @@ library(odbc)
 library(DBI)
 library(dbplyr)
 library(lubridate)
-library(rMR)
+library(respR) 
 library(scales)
 library(knitr)
 
@@ -327,7 +327,7 @@ Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 35) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
 DO_range <- SampleEventWQ1 %>% 
-  mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
+  mutate(DO.Sat = convert_DO(DissolvedOxygen, from = "mg/L", to = "%Air", S = Salinity, t = Temperature) / 100) %>%
   filter(DO.Sat < 0.50 | DO.Sat > 1.20) %>%
   mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, DO.Sat, Comments)

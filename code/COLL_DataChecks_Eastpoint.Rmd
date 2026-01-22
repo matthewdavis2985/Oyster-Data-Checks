@@ -22,7 +22,7 @@ library(odbc)
 library(DBI)
 library(dbplyr)
 library(lubridate)
-library(rMR)
+library(respR)
 library(scales)
 library(geosphere)
 library(knitr)
@@ -412,7 +412,7 @@ Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 35) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
 DO_range <- SampleEventWQ1 %>% 
-  mutate(DO.Sat = DO.saturation(DO.mgl = DissolvedOxygen, temp.C = Temperature, elevation.m = 0, salinity = Salinity)) %>%
+  mutate(DO.Sat = convert_DO(DissolvedOxygen, from = "mg/L", to = "%Air", S = Salinity, t = Temperature) / 100) %>%
   filter(DO.Sat < 0.50 | DO.Sat > 1.20) %>%
   mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, DissolvedOxygen, DO.Sat, Comments)
