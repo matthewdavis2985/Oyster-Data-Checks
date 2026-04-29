@@ -8,10 +8,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2026-03-01")  # Start Date for Checks
-CheckEnd <- as.Date("2026-03-28")  # End Date for Checks
+CheckStart <- as.Date("2026-04-01")  # Start Date for Checks
+CheckEnd <- as.Date("2026-04-28")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_26-03-31"
+Database = "Oysters_26-04-29"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = params$Sites #params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
@@ -392,7 +392,6 @@ TurbidityHach_range <- filter(SampleEventWQ1, TurbidityHach < -2 | TurbidityHach
 
 ## Cage Counts #
   # Unexpected Null values
-# We should change it in ODIN so that empty strings aren't sent. They should be null instead. Then the following line won't be needed
 Counts1$Comments <- ifelse(nchar(Counts1$Comments) == 0, NA, Counts1$Comments) 
 
 null_Counts <- filter(Counts1, is.na(TotalCount) & is.na(Comments)) %>% select(CageCountID, DeployedDate, RetrievedDate, StationNumber, FixedLocationID, CageColor, TotalCount, Comments)
@@ -438,7 +437,7 @@ if (nrow(null_Counts) > 0) {
 }
 
 
-if (nrow(Days_range) > 0 & nrow(Count_range) > 0) {
+if (nrow(Days_range) > 0 | nrow(Count_range) > 0) {
   MessRec_ranges = ""
 } else {
   MessRec_ranges = "Congratulations! No out of range values detected."
@@ -471,6 +470,8 @@ by <p2>`r DataManager`</p2> on
 <p2>`r format(Sys.Date(), "%d.%B.%Y")`</p2> using database <p2> `r Database`</p2>.
 
 `r kable(TripInfo2, caption = "Data from these trips is included in these checks")`
+
+`r kable(Counts1 %>% mutate(CageCountID = sub("_(D|R)_", "_", CageCountID)) %>% dplyr::select(CageCountID, CageColor, DataType, TotalCount) %>% pivot_wider(names_from = DataType, values_from = TotalCount) %>% mutate(CageCountID = paste0(substr(CageCountID,1,2), " ", substr(CageCountID, 19, 22))), caption = "Cage counts")`
 
 <h2>Database Errors:</h2>
 
@@ -520,6 +521,7 @@ comment explaining why the data is missing.
 <p2>`r Mess_null_SH`</p2>
 
 `r if (nrow(null_SH) > 0) {kable(null_SH, caption = "Null Cage shell height data. Null valules should only be recorded when no oysters were measured. ShellHeightID should end _01 and TotalCount should be 0. A comment may be required.")}`
+
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 

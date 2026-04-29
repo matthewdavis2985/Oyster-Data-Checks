@@ -10,10 +10,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variable
-CheckStart <- as.Date("2026-03-01")  # Start Date for Checks
-CheckEnd <- as.Date("2026-03-28")  # End Date for Checks
+CheckStart <- as.Date("2026-04-01")  # Start Date for Checks
+CheckEnd <- as.Date("2026-04-28")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_26-03-31"
+Database = "Oysters_26-04-29"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = c(params$CERP)  #params$[project] or use 2-letter code in Primary Keys for single estuary
@@ -462,6 +462,7 @@ comment explaining why the data is missing.
 <p2>`r Mess_null_Recs`</p2>
 
 `r if (nrow(null_Recs) > 0) {kable(null_Recs, caption = "Null Recruitment Data. Comment Required for all Null values")}`
+
 
 <h3>~ ~ ~ ~ ~ ~ ~ Out of range values ~ ~ ~ ~ ~ ~ ~ </h3>
 
