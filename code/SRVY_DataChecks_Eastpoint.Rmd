@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2024-07-01")  # Start Date for Checks
-CheckEnd <- as.Date("2024-12-31")  # End Date for Checks
+CheckStart <- as.Date("2026-01-01")  # Start Date for Checks
+CheckEnd <- as.Date("2026-04-30")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20250522"
+Database = "OysterLocalMD20260825"
 Server = "localhost\\LOCALSQL"
 ```
 
@@ -397,7 +397,7 @@ null_SurveyQuads <- filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.
   select(QuadratID, NumLive, NumDead, NumLegal, TotalWeight, NumDrills, Comments)
 
   # Out of range values
-SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | NumLegal < 0 | TotalVolume > 30 | TotalWeight < 0.1 | TotalWeight > 10.00 | NumDrills < 0 | NumDrills > 5) %>%
+SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | NumLegal < 0 | TotalWeight < 0.1 | TotalWeight > 10.00 | NumDrills < 0 | NumDrills > 5) %>%
   select(QuadratID, NumLive, NumDead, NumLegal, TotalWeight, NumDrills, Comments) 
 
 ## SurveySH #
@@ -427,7 +427,7 @@ SHmeasures <- as.data.frame(table(SurveySH1$QuadratID)) %>% # Counts up the numb
 
 LegalMeasures <- SurveySH1 %>% # Counts up the number of Legal measurements that were made
   group_by(QuadratID) %>%
-  summarise(count_legals = sum(!is.na(ShellHeight) & ShellHeight > 75)) %>% #Sums legal-sized ShellHeight per QuadratID
+  summarise(count_legals = sum(!is.na(ShellHeight) & ShellHeight > 74)) %>% #Sums legal-sized ShellHeight per QuadratID
   left_join(SurveyQuadrat1, by = c("QuadratID")) %>% 
   filter(NumLive < 51) %>% # filters out quadrats where more than 50 oysters are measured
   filter(is.na(NumLegal) | count_legals != NumLegal) %>% # keeps mismatched legal counts
@@ -606,7 +606,7 @@ values can be outside that range and may or may not require a Comment.
 
 `r if (nrow(SHMismatch) > 0) {kable(SHMismatch, caption = "Mismatched Shell Height and Quadrat data. NumLive must equal NumMeasured, unless: NumLive = 0 & NumMeasured = 1 & InitialSH is NULL -OR- NumLive is greater than 50 and NumMeasured = 50. Comment required for mismatched values.")}`
 
-`r if (nrow(LegalMeasures) > 0) {kable(LegalMeasures, caption = "Mismatched number legal (> 75 mm SH) measured and reported as NumLegal. NumLegal must equal count_Legals, unless: NumLive is greater than 50. Comment required for mismatched values.")}`
+`r if (nrow(LegalMeasures) > 0) {kable(LegalMeasures, caption = "Mismatched number legal (> 74 mm SH) measured and reported as NumLegal. NumLegal must equal count_Legals, unless: NumLive is greater than 50. Comment required for mismatched values.")}`
 
 <h2>SQL Code:</h2>
 
