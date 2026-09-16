@@ -6,11 +6,11 @@ output:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2026-01-01")  # Start Date for Checks
-CheckEnd <- as.Date("2026-04-30")  # End Date for Checks
+CheckStart <- as.Date("2026-05-01")  # Start Date for Checks
+CheckEnd <- as.Date("2026-06-30")  # End Date for Checks
 EstuaryCode = "AB"  # Estuary Code. Use 2-letter code in Primary Keys
 DataManager = "Matthew Davis"
-Database = "OysterLocalMD20260825"
+Database = "OysterLocalMD20260916"
 Server = "localhost\\LOCALSQL"
 ```
 
@@ -371,6 +371,7 @@ Temp_range <- filter(SampleEventWQ1, Temperature < 10 | Temperature > 33) %>%
 Sal_range <- filter(SampleEventWQ1, Salinity < 0.5 | Salinity > 35) %>%
   select(SampleEventWQID, StationNumber, SampleDepth, Salinity, Comments)
 DO_range <- SampleEventWQ1 %>% 
+  filter(!is.na(DissolvedOxygen)) %>% # remove null values which break convert_DO and are captured in null_WQs
   mutate(DO.Sat = convert_DO(DissolvedOxygen, from = "mg/L", to = "%Air", S = Salinity, t = Temperature) / 100) %>%
   filter(DO.Sat < 0.50 | DO.Sat > 1.20) %>%
   mutate(DO.Sat = percent(DO.Sat, accuracy = 1)) %>%
@@ -397,7 +398,7 @@ null_SurveyQuads <- filter(SurveyQuadrat1, is.na(NumLive) | is.na(NumDead) | is.
   select(QuadratID, NumLive, NumDead, NumLegal, TotalWeight, NumDrills, Comments)
 
   # Out of range values
-SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | NumLegal < 0 | TotalWeight < 0.1 | TotalWeight > 10.00 | NumDrills < 0 | NumDrills > 5) %>%
+SurveyQuad_range <- filter(SurveyQuadrat1, NumLive < 0 | NumLive > 500 | NumDead < 0 | NumDead > 300 | NumLegal < 0 | NumLegal > 30 | TotalWeight < 0.1 | TotalWeight > 15.00 | NumDrills < 0 | NumDrills > 5) %>%
   select(QuadratID, NumLive, NumDead, NumLegal, TotalWeight, NumDrills, Comments) 
 
 ## SurveySH #
@@ -596,7 +597,7 @@ values can be outside that range and may or may not require a Comment.
 
 <p2>`r MessSurveyQuad_ranges`</p2>
 
-`r if (nrow(SurveyQuad_range) > 0) {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 500. Expected range for NumDead is 0 to 300. Expected range for NumLegal is 0 to 30. Expected range for TotalWeight is 0.10 to 10.00 kg. Expected range for NumDrills is 0 to 5. Comment required for out of range values.")}`
+`r if (nrow(SurveyQuad_range) > 0) {kable(SurveyQuad_range, caption = "Out of range Quadrat data. Expected range for NumLive is 0 to 500. Expected range for NumDead is 0 to 300. Expected range for NumLegal is 0 to 30. Expected range for TotalWeight is 0.10 to 15.00 kg. Expected range for NumDrills is 0 to 5. Comment required for out of range values.")}`
 
 <h4>--- Survey Shell Heights ---</h4>
 
