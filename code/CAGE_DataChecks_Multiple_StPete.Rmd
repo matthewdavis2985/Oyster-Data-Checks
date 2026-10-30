@@ -8,10 +8,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2026-05-01")  # Start Date for Checks
-CheckEnd <- as.Date("2026-05-28")  # End Date for Checks
+CheckStart <- as.Date("2026-09-01")  # Start Date for Checks
+CheckEnd <- as.Date("2026-10-28")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_26-06-01"
+Database = "Oysters_26-10-30"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = params$Sites #params$Sites  #params$Sites for multiple or use 2-letter code in Primary Keys for single
@@ -218,7 +218,7 @@ if (nrow(SampleEventWQ1[duplicated(SampleEventWQ1$SampleEventWQID), ]) > 0) {
 
 if (nrow(Counts1[duplicated(Counts1$CageCountID), ]) > 0) {
   ERR_Table1d <- bind_rows(ERR_Table1, data.frame(schema = "dbo", Table = "CageCounts", Counts1[duplicated(Counts1$CageCountID), ])) %>% 
-    mutate(PrimaryKey = ShellID) %>%
+    mutate(PrimaryKey = CageCountID) %>%
     select(schema, Table, PrimaryKey)
 }
 

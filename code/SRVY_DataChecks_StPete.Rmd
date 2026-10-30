@@ -10,10 +10,10 @@ params:
 
 ```{r VariableSet, echo = FALSE, warning = FALSE, message = FALSE}
 # Set your variables
-CheckStart <- as.Date("2026-03-01")  # Start Date for Checks
-CheckEnd <- as.Date("2026-03-30")  # End Date for Checks
+CheckStart <- as.Date("2026-09-01")  # Start Date for Checks
+CheckEnd <- as.Date("2026-09-30")  # End Date for Checks
 DataManager = "Erica Williams"
-Database = "Oysters_26-03-31"
+Database = "Oysters_26-10-30"
 Server = "localhost\\ERICALOCALSQL"
 
 EstuaryCode = params$EAST  #params$Sites for multiple or use 2-letter code in Primary Keys for single
@@ -297,7 +297,9 @@ ERR_Table3a <- if(any(EstuaryCode %in% "TB") & CheckStart >= as.Date("2023-01-01
     merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments))
 } else {as.data.frame(table(SurveyQuadrat1$SampleEventID)) %>% # Counts up the number of quadrats that were made
   rename("SampleEventID" = "Var1", "NumOfQuads" = "Freq")  %>%
-    merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments)) %>% filter(NumOfQuads != 15)}
+    unique() %>%
+    merge(SurveyQuadrat1 %>% dplyr::select(SampleEventID, Comments) %>% unique()) %>% 
+    filter(NumOfQuads != 15)}
 
 ### DATABASE ERRORS ###
 # Ensure that Primary Keys and Foreign Keys have been formed correctly
